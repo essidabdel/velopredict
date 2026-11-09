@@ -1,0 +1,201 @@
+# VéloPredict — infrastructure + collecte (Kafka, TimescaleDB, Redis,
+# producer, archiver). Lancement : `docker compose up -d`.
+
+name: velopredict
+
+networks:
+  velopredict-network:
+    driver: bridge
+
+volumes:
+  kafka_data:
+  timescale_data:
+  redis_data:
+
+services:
+  # ---------------------------------------------------------------------
+  # Kafka — image officielle apache/kafka, mode KRaft (sans ZooKeeper),
+  # noeud unique combinant les rôles broker + controller (suffisant pour
+  # un projet scolaire).
+  # ---------------------------------------------------------------------
+  kafka:
+    image: apache/kafka:3.8.0
+    container_name: velopredict-kafka
+    restart: unless-stopped
+    ports:
+      - "${KAFKA_BROKER_PORT:-9092}:9092"
+    environment:
+      # Identité du noeud et rôles KRaft
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      CLUSTER_ID: 4L6g3nShT-eMCtK--X86sw
+
+      # Listeners : PLAINTEXT pour les clients, CONTROLLER pour le quorum KRaft
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      # Réglages adaptés à un noeud unique
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - velopredict-network
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  # ---------------------------------------------------------------------
+  # TimescaleDB (PostgreSQL + extension hypertables) — historique des
+  # relevés station par station.
+  # ---------------------------------------------------------------------
+  timescaledb:
+    image: timescale/timescaledb:2.17.2-pg16
+    container_name: velopredict-timescaledb
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-velopredict}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_DB: ${POSTGRES_DB:-velopredict}
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+      # Schéma appliqué automatiquement au premier démarrage (volume vide).
+      # Notre script crée lui-même l'extension timescaledb, donc il n'y a
+      # plus besoin du script d'init intégré à l'image.
+      - ./database/migrations:/docker-entrypoint-initdb.d:ro
+    networks:
+      - velopredict-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-velopredict} -d ${POSTGRES_DB:-velopredict}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  # ---------------------------------------------------------------------
+  # Redis — dernier état connu de chaque station (lecture rapide par
+  # l'API et le frontend).
+  # ---------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: velopredict-redis
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-change-me}", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - velopredict-network
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD:-change-me} ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # ---------------------------------------------------------------------
+  # Producer — interroge station_status.json toutes les
+  # INGESTION_POLL_INTERVAL_SECONDS et publie chaque station dans Kafka.
+  # ---------------------------------------------------------------------
+  producer:
+    build:
+      context: .
+      dockerfile: ingestion/Dockerfile
+    container_name: velopredict-producer
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - velopredict-network
+
+  # ---------------------------------------------------------------------
+  # Archiver — consomme velib.station_status et insère par lots dans
+  # TimescaleDB (commit des offsets après insertion réussie).
+  # ---------------------------------------------------------------------
+  archiver:
+    build:
+      context: .
+      dockerfile: streaming/Dockerfile
+    container_name: velopredict-archiver
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      DATABASE_URL: postgresql://${POSTGRES_USER:-velopredict}:${POSTGRES_PASSWORD:-change-me}@timescaledb:5432/${POSTGRES_DB:-velopredict}
+    depends_on:
+      kafka:
+        condition: service_healthy
+      timescaledb:
+        condition: service_healthy
+    networks:
+      - velopredict-network
+
+  # ---------------------------------------------------------------------
+  # Live — même topic Kafka que l'archiver (groupe de consumers séparé),
+  # mais écrit le dernier état de chaque station dans Redis pour une
+  # lecture rapide par l'API.
+  # ---------------------------------------------------------------------
+  live:
+    build:
+      context: .
+      dockerfile: streaming/Dockerfile
+    container_name: velopredict-live
+    command: ["python", "-m", "streaming.live"]
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      REDIS_URL: redis://:${REDIS_PASSWORD:-change-me}@redis:6379/0
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - velopredict-network
+
+  # ---------------------------------------------------------------------
+  # API — FastAPI (consultation des stations, historique, statistiques).
+  # Documentation interactive sur /docs une fois démarrée.
+  # ---------------------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    container_name: velopredict-api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-velopredict}:${POSTGRES_PASSWORD:-change-me}@timescaledb:5432/${POSTGRES_DB:-velopredict}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-change-me}@redis:6379/0
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      # Modèles entraînés localement (python -m ml.retrain) montés en
+      # lecture seule : un réentraînement met à jour l'API sans rebuild.
+      - ./ml/models:/app/ml/models:ro
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - velopredict-network

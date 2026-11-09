@@ -1,0 +1,11 @@
+# Dépendances de développement (lint, tests). Les dépendances runtime de
+# chaque composant sont dans leur propre requirements.txt (ingestion/,
+# streaming/, ...).
+-r ingestion/requirements-backfill.txt
+-r streaming/requirements.txt
+-r api/requirements.txt
+-r analysis/requirements.txt
+-r ml/requirements.txt
+ruff==0.17.4
+pytest==9.2.0
+httpx==0.28.1

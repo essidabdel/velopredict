@@ -1,0 +1,6 @@
+# Dépendances supplémentaires pour ingestion/backfill.py (script ponctuel,
+# PAS installé dans l'image Docker du producer — pandas/pyarrow
+# alourdiraient inutilement un service qui tourne en continu).
+-r requirements.txt
+pandas==2.2.3
+pyarrow==26.0.1

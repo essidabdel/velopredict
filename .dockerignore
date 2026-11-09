@@ -1,0 +1,12 @@
+.venv/
+.git/
+__pycache__/
+*.pyc
+node_modules/
+frontend/
+ml/reports/
+analysis/
+docs/
+tests/
+.env
+.scratch/
