@@ -20,6 +20,7 @@ Projet réalisé dans le cadre du module **Open Data** (IPSSI) — Sujet 4
 - [Analyses (Phase 4)](#analyses-phase-4)
 - [Connecter Power BI](#connecter-power-bi)
 - [Vérifier que tout fonctionne](#vérifier-que-tout-fonctionne)
+- [Captures d'écran](#captures-décran)
 - [État d'avancement](#état-davancement)
 
 ## Objectif
@@ -118,7 +119,7 @@ velopredict/
 ├── api/              # FastAPI
 ├── ml/               # features, entraînement, évaluation, modèle sauvegardé
 ├── analysis/         # notebooks d'analyse, exports pour Power BI
-├── frontend/         # React
+├── frontend/         # React + Vite + react-leaflet
 ├── docs/             # schéma d'architecture, captures, MCD
 └── tests/
 ```
@@ -127,7 +128,8 @@ velopredict/
 
 - [Docker](https://www.docker.com/) + Docker Compose v2
 - Python 3.11+
-- Node.js 20+ (pour le frontend, à venir)
+- Node.js 20+ (pour développer le frontend hors Docker ; le build en
+  conteneur n'en a pas besoin sur la machine hôte)
 
 > Si un PostgreSQL local tourne déjà sur la machine (service Windows,
 > install native...), il occupe souvent le port 5432 : TimescaleDB est donc
@@ -141,7 +143,7 @@ velopredict/
 cp .env.example .env
 
 # 2. Démarrer toute la stack (Kafka, TimescaleDB, Redis, producer,
-#    archiver, live, api)
+#    archiver, live, api, frontend)
 docker compose up -d --build
 
 # 3. Suivre les logs si besoin
@@ -150,8 +152,8 @@ docker compose logs -f producer archiver live api
 
 Le schéma SQL (`database/migrations/`) est appliqué automatiquement au
 premier démarrage de TimescaleDB (volume vide). L'API est accessible sur
-`http://localhost:8000` (`/docs` pour Swagger). Le frontend n'est pas
-encore implémenté à ce stade.
+`http://localhost:8000` (`/docs` pour Swagger) et la Web App sur
+`http://localhost:3000`.
 
 Pour charger/rafraîchir le référentiel des stations et les données
 d'enrichissement (changent rarement ou périodiquement — pas besoin de les
@@ -372,6 +374,58 @@ pip install -r ml/requirements.txt && python -m ml.retrain  # entraîne le modè
   imports différés). Détails dans `ml/reports/RESULTATS.md` §6 et les
   commentaires du code ; sans impact sur la qualité des modèles.
 
+### `frontend/` — Web App (React + Vite + react-leaflet)
+
+- **Rôle** : consulte l'API FastAPI depuis le navigateur, sans aucun appel
+  serveur intermédiaire (le build nginx sert uniquement des fichiers
+  statiques). 5 pages :
+  - **Carte** (`/`) — les ~1522 stations en `CircleMarker` (rendu canvas,
+    `preferCanvas`), couleur **et** libellé par état (vide, disponibilité
+    faible ≤20% de la capacité, disponible, pleine, inconnue), légende
+    visible, actualisation automatique toutes les 60s.
+  - **Recherche + filtres** — recherche par nom de station, et filtres
+    commune/arrondissement, type de vélo, état, combinables entre eux et
+    reflétés dans l'URL (`?arrondissement=16e&velo=mecanique&etat=disponible`)
+    via `useSearchParams` — un lien copié/partagé reproduit exactement la
+    même vue.
+  - **Fiche station** (`/stations/:id`) — état actuel, courbe des 24
+    dernières heures (recharts), prédictions à t+30/t+60min (nombre de
+    vélos) et le risque de pénurie à 30min affiché **uniquement** comme un
+    niveau discret (faible/moyen/élevé), jamais une probabilité brute (voir
+    `ml/predict.py::classify_risk_level`).
+  - **Tableau de bord** (`/dashboard`) — indicateurs globaux (vélos
+    disponibles, stations vides/pleines) + 3 graphiques (répartition par
+    état, mécanique vs électrique, communes avec le plus de stations
+    vides).
+  - **À propos** (`/about`) — sources open data, attribution ODbL, méthode
+    et limites du modèle.
+  - États de chargement et d'erreur gérés sur chaque page (message clair +
+    bouton « Réessayer » si l'API est injoignable, voir
+    [captures d'écran](#captures-décran)) ; design responsive (testé en
+    largeur mobile).
+- **Lancement** :
+  ```bash
+  docker compose up -d --build frontend   # http://localhost:3000 (nginx)
+
+  # ou en dev, avec rechargement à chaud :
+  cd frontend && npm install && npm run dev   # http://localhost:5173
+  ```
+  `VITE_API_BASE_URL` (défaut `http://localhost:8000`) est inliné **au
+  build** par Vite (variable d'environnement classique inutile au
+  runtime) — voir `frontend/Dockerfile` et `FRONTEND_PORT`/
+  `VITE_API_BASE_URL` dans `.env.example`.
+- **Vérification** :
+  ```bash
+  curl -s -o /dev/null -w "%{http_code}
+" http://localhost:3000/            # 200
+  curl -s -o /dev/null -w "%{http_code}
+" http://localhost:3000/dashboard   # 200 (fallback SPA nginx)
+  cd frontend && npm run lint && npx tsc -b   # oxlint + vérification des types
+  ```
+- **Versioning du modèle** : le modèle servi par l'API est figé au tag git
+  `model-v1` depuis le début de cette phase — voir la note en tête de
+  [`ml/reports/RESULTATS.md`](ml/reports/RESULTATS.md).
+
 ### `analysis/` — notebooks et exports Power BI
 
 - **Rôle** : 5 notebooks Jupyter (commentés en français, une conclusion par
@@ -536,6 +590,26 @@ compression native TimescaleDB (`ALTER TABLE ... SET (timescaledb.compress)`)
 pourra être activée plus tard sur les anciens chunks si besoin, sans
 impact sur l'ingestion.
 
+## Captures d'écran
+
+Prises sur le build Docker (nginx, `http://localhost:3000`) le 2026-11-10,
+avec des données réelles collectées en continu depuis la Phase 1.
+
+| | |
+|---|---|
+| **Carte** — ~1522 stations, couleur + légende par état | **Carte filtrée** — `arrondissement=16e&velo=mecanique&etat=disponible`, combiné dans l'URL |
+| ![Carte des stations](docs/screenshots/01-carte.jpg) | ![Carte avec filtres combinés](docs/screenshots/02-carte-filtres.jpg) |
+| **Fiche station** — 24h + prédiction honnête quand l'historique récent manque | **Tableau de bord** — indicateurs globaux + 3 graphiques |
+| ![Fiche station](docs/screenshots/03-fiche-station.jpg) | ![Tableau de bord](docs/screenshots/04-tableau-de-bord.jpg) |
+| **À propos** — sources open data et attribution ODbL | **État d'erreur** — API arrêtée volontairement pour vérifier le message + bouton « Réessayer » |
+| ![À propos](docs/screenshots/05-a-propos.jpg) | ![Erreur API injoignable](docs/screenshots/06-erreur-api.jpg) |
+
+La fiche station ci-dessus illustre aussi une vraie interruption de
+collecte d'environ 10h40 (nuit du 9 au 10 novembre 2026, machine hôte
+probablement mise en veille) : la courbe le montre honnêtement plutôt que
+de l'interpoler, et l'API refuse la prédiction (message explicite) plutôt
+que de deviner sur un historique trop ancien.
+
 ## État d'avancement
 
 - [x] Phase 0 — Initialisation du dépôt (arborescence, Docker Compose,
@@ -552,8 +626,12 @@ impact sur l'ingestion.
 - [x] Phase 5 — Modèle de prédiction (baselines, régression linéaire,
       LightGBM, SHAP, endpoint `/prediction`, script de ré-entraînement —
       voir [`ml/reports/RESULTATS.md`](ml/reports/RESULTATS.md))
-- [ ] Phase 6 — Web App (React + Leaflet) et filtres (penser à reprendre
-      l'attribution ODbL — voir [Attribution — historique backfillé](#attribution--historique-backfillé) — dans le pied de page)
+- [x] Phase 6 — Web App (React + Vite + react-leaflet) : carte,
+      recherche + filtres combinables reflétés dans l'URL, fiche station
+      (historique, prédictions, risque en niveau discret), tableau de
+      bord, page À propos avec attribution ODbL, états de chargement/
+      erreur, frontend ajouté au `docker-compose.yml` — voir
+      [Captures d'écran](#captures-décran)
 - [ ] Phase 7 — Bonus Big Data (PySpark, Airflow)
 
 Chaque phase est validée avant de passer à la suivante (voir `CLAUDE.md`).

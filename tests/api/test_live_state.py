@@ -2,6 +2,7 @@ import json
 
 from api.live_state import (
     ETAT_DISPONIBLE,
+    ETAT_FAIBLE,
     ETAT_INCONNU,
     ETAT_PLEINE,
     ETAT_VIDE,
@@ -40,6 +41,30 @@ def test_classify_state_vide_has_priority_over_pleine():
     assert (
         classify_state({"num_mechanical": 0, "num_ebike": 0, "num_docks_available": 0}) == ETAT_VIDE
     )
+
+
+def test_classify_state_disponible_when_no_capacity_given():
+    # Sans capacité fournie, impossible de distinguer "faible" :
+    # comportement inchangé par rapport à avant l'ajout de cet état.
+    assert (
+        classify_state({"num_mechanical": 1, "num_ebike": 0, "num_docks_available": 4})
+        == ETAT_DISPONIBLE
+    )
+
+
+def test_classify_state_faible_under_20_percent_of_capacity():
+    live = {"num_mechanical": 2, "num_ebike": 0, "num_docks_available": 18}
+    assert classify_state(live, capacity=20) == ETAT_FAIBLE  # 2/20 = 10%
+
+
+def test_classify_state_disponible_above_20_percent_of_capacity():
+    live = {"num_mechanical": 5, "num_ebike": 0, "num_docks_available": 15}
+    assert classify_state(live, capacity=20) == ETAT_DISPONIBLE  # 5/20 = 25%
+
+
+def test_classify_state_vide_has_priority_over_faible():
+    live = {"num_mechanical": 0, "num_ebike": 0, "num_docks_available": 20}
+    assert classify_state(live, capacity=20) == ETAT_VIDE
 
 
 class FakeRedis:

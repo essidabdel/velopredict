@@ -4,6 +4,14 @@ Phase 5 + 5bis (fiabilisation) + 5ter (classification et tests
 complémentaires). Prédiction du nombre total de vélos disponibles
 (mécaniques + électriques) par station, à t+30 et t+60 minutes.
 
+**Versioning** : le modèle décrit et évalué ici est tagué `model-v1`
+(tag git annoté sur le commit qui le produit). Copie figée des fichiers
+`.joblib` dans `ml/models/model-v1/` (hors git, volontairement — voir
+`.gitignore` — c'est un filet de sécurité local contre un ré-entraînement
+accidentel, pas une sauvegarde versionnée). À partir de la Phase 6 (Web
+App), le modèle n'est plus modifié : `GET /stations/{id}/prediction`
+sert `model-v1` sans changement.
+
 ## 1. Vérification : cibles calculées par horodatage réel, pas par shift
 
 Le calcul initial des lags/cibles utilisait `groupby().shift()` — un

@@ -13,6 +13,17 @@ from sqlalchemy.engine import Engine
 from .features import FEATURE_COLUMNS, PARIS_TZ
 from .train import load_model
 
+# Seuils du niveau de risque "vide dans 30 min", dérivés de la prédiction
+# du modèle de niveau (pas une probabilité calibrée). RISK_HIGH_THRESHOLD
+# reprend le seuil réglé sur validation en Phase 5ter pour le classifieur
+# "régression seuillée" (voir ml/classify.py, ml/reports/RESULTATS.md §9)
+# : la meilleure frontière empirique pour "sera vide". RISK_MEDIUM_THRESHOLD
+# est une marge heuristique (x3) au-delà de laquelle le risque est jugé
+# faible — pas calibrée formellement, affichée en niveau discret et jamais
+# en probabilité brute (demande explicite de la Phase 6).
+RISK_HIGH_THRESHOLD = 1.25
+RISK_MEDIUM_THRESHOLD = 4.0
+
 TOLERANCE = pd.Timedelta("30min")
 LAG_OFFSETS_MINUTES = {
     "bikes_t": 0,
@@ -102,6 +113,16 @@ def build_live_features(engine: Engine, station_id: int) -> dict | None:
     return {"as_of": now, **features}
 
 
+def classify_risk_level(prediction_30min: float) -> str:
+    """Niveau de risque discret "vide dans 30 min", jamais une probabilité
+    brute (voir les seuils documentés plus haut)."""
+    if prediction_30min <= RISK_HIGH_THRESHOLD:
+        return "eleve"
+    if prediction_30min <= RISK_MEDIUM_THRESHOLD:
+        return "moyen"
+    return "faible"
+
+
 def predict_station(engine: Engine, station_id: int) -> dict | None:
     features = build_live_features(engine, station_id)
     if features is None:
@@ -119,4 +140,5 @@ def predict_station(engine: Engine, station_id: int) -> dict | None:
         "bikes_now": features["bikes_t"],
         "prediction_30min": round(pred_30, 1),
         "prediction_60min": round(pred_60, 1),
+        "risk_level_30min": classify_risk_level(pred_30),
     }

@@ -17,18 +17,25 @@ STATION_KEY_PREFIX = "station:"
 STATIONS_INDEX_KEY = "stations:index"
 
 ETAT_VIDE = "vide"
+ETAT_FAIBLE = "faible"
 ETAT_PLEINE = "pleine"
 ETAT_DISPONIBLE = "disponible"
 ETAT_INCONNU = "inconnue"
 
+# "faible" : vélos disponibles sous ce ratio de la capacité (et > 0 — sinon
+# c'est "vide"). Seuil simple et documenté, pas calibré statistiquement.
+FAIBLE_RATIO_THRESHOLD = 0.2
 
-def classify_state(live: dict[str, Any] | None) -> str:
+
+def classify_state(live: dict[str, Any] | None, capacity: int | None = None) -> str:
     """Classe une station par rapport à son état temps réel :
     - "inconnue"  : aucune donnée temps réel reçue encore (service live pas
                     à jour, ou station jamais vue dans le flux Kafka)
     - "vide"      : 0 vélo disponible (prioritaire si bornes aussi à 0)
     - "pleine"    : 0 borne libre
-    - "disponible": au moins un vélo et une borne libre
+    - "faible"    : vélos disponibles ≤ 20% de la capacité (si `capacity`
+                    fourni — sinon cette distinction est ignorée)
+    - "disponible": le reste
     """
     if live is None:
         return ETAT_INCONNU
@@ -37,6 +44,8 @@ def classify_state(live: dict[str, Any] | None) -> str:
         return ETAT_VIDE
     if live.get("num_docks_available", 0) <= 0:
         return ETAT_PLEINE
+    if capacity and capacity > 0 and total_bikes / capacity <= FAIBLE_RATIO_THRESHOLD:
+        return ETAT_FAIBLE
     return ETAT_DISPONIBLE
 
 

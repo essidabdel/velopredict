@@ -16,7 +16,7 @@ from ..schemas import HistoryPoint, StationDetail, StationSummary
 router = APIRouter(tags=["stations"])
 
 VeloType = Literal["mecanique", "electrique"]
-EtatType = Literal["vide", "pleine", "disponible"]
+EtatType = Literal["vide", "faible", "pleine", "disponible"]
 
 
 def _build_summary(row: dict, live: dict | None) -> StationSummary:
@@ -28,7 +28,7 @@ def _build_summary(row: dict, live: dict | None) -> StationSummary:
         lat=row["lat"],
         lon=row["lon"],
         capacity=row["capacity"],
-        etat=live_state.classify_state(live),
+        etat=live_state.classify_state(live, row["capacity"]),
         num_mechanical=live.get("num_mechanical") if live else None,
         num_ebike=live.get("num_ebike") if live else None,
         num_docks_available=live.get("num_docks_available") if live else None,
@@ -93,7 +93,7 @@ def list_stations(
         live = live_statuses.get(row["station_id"])
         if velo is not None and not _station_has_velo_type(live, velo):
             continue
-        if etat is not None and live_state.classify_state(live) != etat:
+        if etat is not None and live_state.classify_state(live, row["capacity"]) != etat:
             continue
         results.append(_build_summary(row, live))
     return results

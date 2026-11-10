@@ -15,7 +15,7 @@ class StationSummary(BaseModel):
     lat: float
     lon: float
     capacity: int
-    etat: str = Field(description="vide | pleine | disponible | inconnue")
+    etat: str = Field(description="vide | faible | pleine | disponible | inconnue")
     num_mechanical: int | None = None
     num_ebike: int | None = None
     num_docks_available: int | None = None
@@ -43,6 +43,9 @@ class StationPrediction(BaseModel):
     bikes_now: float = Field(description="Vélos disponibles au moment de la prédiction")
     prediction_30min: float = Field(description="Vélos disponibles prédits à t+30min")
     prediction_60min: float = Field(description="Vélos disponibles prédits à t+60min")
+    risk_level_30min: str = Field(
+        description="Risque de pénurie à t+30min : eleve | moyen | faible"
+    )
 
 
 class StatsOverview(BaseModel):

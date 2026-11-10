@@ -13,6 +13,7 @@ def test_prediction_success(client, monkeypatch, tmp_path):
             "bikes_now": 10.0,
             "prediction_30min": 9.5,
             "prediction_60min": 9.0,
+            "risk_level_30min": "faible",
         },
     )
 
@@ -23,6 +24,7 @@ def test_prediction_success(client, monkeypatch, tmp_path):
     assert body["station_id"] == 6245
     assert body["prediction_30min"] == 9.5
     assert body["prediction_60min"] == 9.0
+    assert body["risk_level_30min"] == "faible"
 
 
 def test_prediction_404_when_insufficient_recent_data(client, monkeypatch, tmp_path):

@@ -199,3 +199,24 @@ services:
         condition: service_healthy
     networks:
       - velopredict-network
+
+  # ---------------------------------------------------------------------
+  # Frontend — React + Vite + react-leaflet, servi en statique par nginx.
+  # Le navigateur appelle l'API directement sur son port publié
+  # (VITE_API_BASE_URL, inliné au build) : pas de proxy, pas d'appel
+  # inter-conteneurs pour ce service.
+  # ---------------------------------------------------------------------
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+    container_name: velopredict-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      - api
+    networks:
+      - velopredict-network
