@@ -19,6 +19,7 @@ Projet réalisé dans le cadre du module **Open Data** (IPSSI) — Sujet 4
 - [Composants](#composants)
 - [Analyses (Phase 4)](#analyses-phase-4)
 - [Connecter Power BI](#connecter-power-bi)
+- [Outils d'inspection (démo / présentation)](#outils-dinspection-démo--présentation)
 - [Vérifier que tout fonctionne](#vérifier-que-tout-fonctionne)
 - [Captures d'écran](#captures-décran)
 - [État d'avancement](#état-davancement)
@@ -528,6 +529,31 @@ Si la machine qui fait tourner Power BI n'a pas accès au réseau Docker
 3. Pour rafraîchir après une nouvelle collecte : relancer le script export
    puis **Actualiser** dans Power BI (si les CSV sont au même chemin, le
    rafraîchissement reprend les mêmes requêtes automatiquement).
+
+## Outils d'inspection (démo / présentation)
+
+Trois interfaces web en lecture, utiles pour montrer concrètement le
+pipeline Kafka → TimescaleDB/Redis à l'oral — **pas démarrées** par
+`docker compose up -d` (profil Docker séparé, pour ne pas alourdir le
+lancement normal) :
+
+```bash
+docker compose --profile tools up -d   # démarre les 3 interfaces
+docker compose --profile tools down    # les arrête (le reste continue de tourner)
+```
+
+| Interface | URL | Ce que ça montre |
+|---|---|---|
+| **Kafka UI** | http://localhost:8081 | Le topic `velib.station_status`, son nombre de messages/sa taille, et le contenu JSON brut de chaque message (onglet *Messages*) |
+| **Adminer** | http://localhost:8082 | Les tables/vues PostgreSQL/TimescaleDB — se connecter avec Système **PostgreSQL**, Serveur `timescaledb`, Utilisateur/Base `velopredict`, mot de passe = `POSTGRES_PASSWORD` du `.env` |
+| **Redis Commander** | http://localhost:8083 | Les clés `station:<id>` (dernier état connu) — console `redis>` en bas de page pour taper `get station:6245` par exemple |
+
+> ⚠️ Démarrer ce profil recrée `producer`/`archiver`/`live`/`api` si le
+> fichier `.env` vient de changer (Docker Compose invalide leur config
+> dès que `.env` change, même si les variables qu'ils utilisent sont
+> identiques) : coupure de quelques secondes, aucune perte de données
+> (Kafka conserve les messages, les inserts sont idempotents). Les
+> conteneurs `kafka`/`timescaledb`/`redis` eux-mêmes ne redémarrent pas.
 
 ## Vérifier que tout fonctionne
 

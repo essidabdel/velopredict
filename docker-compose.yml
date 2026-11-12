@@ -220,3 +220,56 @@ services:
       - api
     networks:
       - velopredict-network
+
+  # ---------------------------------------------------------------------
+  # Outils d'inspection (démo / présentation uniquement) — PAS démarrés
+  # par `docker compose up -d` : nécessitent le profil "tools".
+  #   docker compose --profile tools up -d
+  #   docker compose --profile tools down       (les arrêter ensuite)
+  # Inspection seule : Kafka UI peut créer/supprimer des topics si on le
+  # lui demande, mais on ne s'en sert ici que pour regarder.
+  # ---------------------------------------------------------------------
+  kafka-ui:
+    image: provectuslabs/kafka-ui:v0.7.2
+    container_name: velopredict-kafka-ui
+    profiles: ["tools"]
+    restart: unless-stopped
+    environment:
+      KAFKA_CLUSTERS_0_NAME: velopredict
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      DYNAMIC_CONFIG_ENABLED: "false"
+    ports:
+      - "${KAFKA_UI_PORT:-8081}:8080"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - velopredict-network
+
+  adminer:
+    image: adminer:4.8.1
+    container_name: velopredict-adminer
+    profiles: ["tools"]
+    restart: unless-stopped
+    ports:
+      - "${ADMINER_PORT:-8082}:8080"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    networks:
+      - velopredict-network
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: velopredict-redis-commander
+    profiles: ["tools"]
+    restart: unless-stopped
+    environment:
+      REDIS_HOSTS: local:redis:6379:0:${REDIS_PASSWORD:-change-me}
+    ports:
+      - "${REDIS_COMMANDER_PORT:-8083}:8081"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - velopredict-network
