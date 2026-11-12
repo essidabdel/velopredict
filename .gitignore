@@ -64,3 +64,9 @@ airflow.db
 .idea/
 .DS_Store
 Thumbs.db
+
+# --- Skills (outillage agent local, pas le projet — réinstallable via
+#     `npx skills add https://github.com/anthropics/skills --skill <nom>`) ---
+.agents/
+.claude/
+skills-lock.json

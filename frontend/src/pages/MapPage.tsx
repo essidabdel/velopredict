@@ -61,7 +61,8 @@ export function MapPage() {
             <MapLegend floating />
             <span className="map-overlay map-count-overlay chip" style={{ color: "var(--brand-dark)" }}>
               <RadioTower size={14} />
-              {stations.length} station{stations.length > 1 ? "s" : ""} · maj 60s
+              {stations.length} station{stations.length > 1 ? "s" : ""} actualisée
+              {stations.length > 1 ? "s" : ""} chaque minute
             </span>
           </div>
         )}

@@ -1,4 +1,3 @@
-import { ArrowRight } from "lucide-react";
 import { CircleMarker, MapContainer, Popup, TileLayer } from "react-leaflet";
 import { Link } from "react-router-dom";
 import "leaflet/dist/leaflet.css";
@@ -64,21 +63,18 @@ export function StationMap({ stations }: { stations: StationSummary[] }) {
                 </span>
                 {station.num_mechanical !== null && station.num_ebike !== null && (
                   <span style={{ fontSize: "0.82rem", color: "#4c5f5d" }}>
-                    {station.num_mechanical} mécaniques · {station.num_ebike} électriques
+                    {station.num_mechanical} mécaniques, {station.num_ebike} électriques
                   </span>
                 )}
                 <Link
                   to={`/stations/${station.station_id}`}
                   style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 4,
                     fontSize: "0.82rem",
                     fontWeight: 650,
                     marginTop: 2,
                   }}
                 >
-                  Voir la fiche station <ArrowRight size={13} />
+                  Voir la fiche station
                 </Link>
               </div>
             </Popup>

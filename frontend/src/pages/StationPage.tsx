@@ -75,7 +75,7 @@ export function StationPage() {
           style={{ margin: 0, display: "flex", alignItems: "center", gap: 6, paddingLeft: 2 }}
         >
           <MapPin size={15} />
-          {station.commune_nom ?? "Commune inconnue"} · Capacité {station.capacity} places
+          {station.commune_nom ?? "Commune inconnue"}, {station.capacity} places au total
         </p>
       </div>
 

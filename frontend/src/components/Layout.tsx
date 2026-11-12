@@ -1,4 +1,4 @@
-import { Info, LayoutDashboard, MapIcon, Menu, Moon, Sun, X } from "lucide-react";
+import { Bike, Info, LayoutDashboard, MapIcon, Menu, Moon, Sun, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { NavLink, Outlet } from "react-router-dom";
@@ -107,19 +107,22 @@ export function Layout() {
                 width: 32,
                 height: 32,
                 borderRadius: 9,
-                background: "var(--brand-gradient)",
+                background: "var(--brand)",
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
-                boxShadow: "var(--shadow-brand)",
-                fontSize: "1.05rem",
+                color: "#fff",
               }}
             >
-              🚲
+              <Bike size={17} />
             </span>
             <span
-              className="gradient-text"
-              style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.05rem" }}
+              style={{
+                fontFamily: "var(--font-display)",
+                fontWeight: 700,
+                fontSize: "1.05rem",
+                color: "var(--text-primary)",
+              }}
             >
               VéloPredict
             </span>

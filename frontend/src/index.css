@@ -106,33 +106,16 @@ body,
   height: 100%;
 }
 
+/* Fond plat, pas de dégradé décoratif derrière tout le contenu : le
+   dégradé de marque reste réservé aux boutons d'action primaires, pour
+   que son apparition signale vraiment quelque chose. */
 body {
   margin: 0;
   font-family: var(--font-sans);
   color: var(--text-primary);
-  background:
-    radial-gradient(1200px 520px at 10% -12%, rgba(13, 148, 136, 0.1), transparent 60%),
-    radial-gradient(900px 440px at 100% 0%, rgba(14, 116, 144, 0.08), transparent 55%),
-    var(--surface-0);
-  background-attachment: fixed;
+  background: var(--surface-0);
   -webkit-font-smoothing: antialiased;
   transition: background-color var(--transition), color var(--transition);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) body {
-    background:
-      radial-gradient(1200px 520px at 10% -12%, rgba(13, 148, 136, 0.16), transparent 60%),
-      radial-gradient(900px 440px at 100% 0%, rgba(45, 212, 191, 0.1), transparent 55%),
-      var(--surface-0);
-  }
-}
-
-:root[data-theme="dark"] body {
-  background:
-    radial-gradient(1200px 520px at 10% -12%, rgba(13, 148, 136, 0.16), transparent 60%),
-    radial-gradient(900px 440px at 100% 0%, rgba(45, 212, 191, 0.1), transparent 55%),
-    var(--surface-0);
 }
 
 a {
@@ -181,12 +164,15 @@ select {
   }
 }
 
+/* Bordure seule par défaut, pas d'ombre : l'ombre est réservée à ce qui
+   flotte vraiment au-dessus du reste (nav, overlays de carte, panneau
+   mobile) - sinon tout le contenu porte la même "carte SaaS" uniforme et
+   plus rien ne se distingue comme réellement élevé. */
 .card {
   background: var(--surface-1);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: var(--space-5);
-  box-shadow: var(--shadow-sm);
   transition: box-shadow var(--transition), transform var(--transition), border-color var(--transition);
 }
 
@@ -215,9 +201,8 @@ select {
   width: 44px;
   height: 44px;
   border-radius: var(--radius);
-  background: var(--brand-gradient);
+  background: var(--brand);
   color: #fff;
-  box-shadow: var(--shadow-brand);
   flex-shrink: 0;
 }
 
@@ -249,13 +234,6 @@ select {
 
 .text-secondary {
   color: var(--text-secondary);
-}
-
-.gradient-text {
-  background: var(--brand-gradient);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
 }
 
 /* Boutons */
@@ -382,11 +360,9 @@ select {
 }
 
 .field-label {
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  color: var(--text-secondary);
 }
 
 .input-wrap {
@@ -560,7 +536,7 @@ select.input:focus {
   top: -48px;
   left: var(--space-4);
   z-index: 2000;
-  background: var(--brand-gradient);
+  background: var(--brand);
   color: #fff;
   padding: 10px 18px;
   border-radius: var(--radius);
