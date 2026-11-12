@@ -1,12 +1,17 @@
 """DAG déclenché manuellement : rafraîchit le référentiel des stations
 (nom, capacité, coordonnées) puis leur commune/arrondissement.
 
-Ne tourne jamais tout seul (`schedule=None`) : le référentiel Vélib'
-change rarement (ouverture/fermeture de station), inutile de le vérifier
-chaque nuit. `ingestion.stations_geo` est le plus lent des trois DAGs
-(reverse-geocoding via geo.api.gouv.fr, ~6-8 min la première fois) — on
-le déclenche à la main depuis l'UI Airflow quand on sait que le
-référentiel a changé.
+Depuis l'ajout de `rafraichir_stations` à `enrichissement_quotidien.py`
+(DAG planifié chaque nuit), le référentiel de base (nom/capacité/
+coordonnées) est déjà à jour quotidiennement — une nouvelle station
+apparaît sur la carte dès le lendemain de son ouverture. `charger_stations`
+reste ici par simplicité/robustesse (upsert idempotent, sans effet si déjà
+à jour) : ce DAG sert surtout à lancer `ingestion.stations_geo`, le plus
+lent des trois DAGs (reverse-geocoding via geo.api.gouv.fr, ~6-8 min la
+première fois) — pas automatisé chaque nuit car la position d'une station
+ne change jamais une fois créée, inutile de le revérifier en continu. À
+déclencher à la main depuis l'UI Airflow quand on sait qu'une nouvelle
+station doit recevoir sa commune/arrondissement.
 """
 
 from __future__ import annotations
