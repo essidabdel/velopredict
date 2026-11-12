@@ -738,8 +738,34 @@ select.input:focus {
   box-shadow: var(--shadow-sm);
 }
 
+/* Contrôle de zoom Leaflet : coins et couleurs alignés sur le reste de
+   l'app plutôt que les carrés blancs par défaut, et lisible en mode
+   sombre (le filtre CSS du fond de carte ne touche que les tuiles). */
+.leaflet-control-zoom {
+  border: none !important;
+  box-shadow: var(--shadow-sm) !important;
+  border-radius: var(--radius) !important;
+  overflow: hidden;
+}
+
 .leaflet-control-zoom a {
-  border-radius: var(--radius-sm) !important;
+  background: var(--surface-1) !important;
+  color: var(--text-primary) !important;
+  border: none !important;
+  border-bottom: 1px solid var(--border) !important;
+  width: 32px !important;
+  height: 32px !important;
+  line-height: 32px !important;
+  font-size: 18px !important;
+}
+
+.leaflet-control-zoom a:last-child {
+  border-bottom: none !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: var(--surface-3) !important;
+  color: var(--brand) !important;
 }
 
 /* Mode sombre pour la carte : OSM n'a qu'un rendu clair, donc on filtre le

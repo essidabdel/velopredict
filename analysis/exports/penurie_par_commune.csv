@@ -1,89 +1,89 @@
 commune_nom,nb_mesures,nb_mesures_vide,taux_penurie
-Bourg-la-Reine,23332,4727,0.2026
-Colombes,34998,6068,0.1734
-Bobigny,34998,6021,0.172
-Suresnes,58330,9857,0.169
-Paris 8e Arrondissement,309149,49539,0.1602
-Paris 20e Arrondissement,402477,61005,0.1516
-Paris 9e Arrondissement,268318,37972,0.1415
-Les Lilas,23332,3199,0.1371
-Chaville,17499,2391,0.1366
-Paris 2e Arrondissement,140780,18661,0.1326
-Sèvres,34998,4186,0.1196
-Bagnolet,46664,5446,0.1167
-Paris 3e Arrondissement,87495,9540,0.109
-Villejuif,64163,6924,0.1079
-Paris 18e Arrondissement,361646,38444,0.1063
-Paris 10e Arrondissement,309149,30874,0.0999
-Meudon,29165,2847,0.0976
-Romainville,34998,3374,0.0964
-Montrouge,75829,6858,0.0904
-Garches,29165,2593,0.0889
-Clamart,17499,1508,0.0862
-Fontenay-aux-Roses,23332,1998,0.0856
-Vanves,40831,3432,0.0841
-Malakoff,46664,3762,0.0806
-Paris 19e Arrondissement,349980,27633,0.079
-Châtillon,34998,2728,0.0779
-Bagneux,29165,2122,0.0728
-Paris 7e Arrondissement,174990,12487,0.0714
-Paris 1er Arrondissement,151658,10735,0.0708
-Rueil-Malmaison,58330,4122,0.0707
-Paris 14e Arrondissement,314982,21927,0.0696
-Fontenay-sous-Bois,69996,4794,0.0685
-Paris 4e Arrondissement,151449,9944,0.0657
-Le Kremlin-Bicêtre,29165,1837,0.063
-Paris 5e Arrondissement,209988,13095,0.0624
-Ville-d'Avray,11666,727,0.0623
-Paris 16e Arrondissement,361646,22443,0.0621
-Le Pré-Saint-Gervais,11771,675,0.0573
-Montreuil,134159,7323,0.0546
-Paris 17e Arrondissement,367479,18853,0.0513
-Créteil,99161,5067,0.0511
-Paris 6e Arrondissement,198322,9196,0.0464
-Sceaux,23332,1081,0.0463
-Paris 13e Arrondissement,402477,18335,0.0456
-Paris 12e Arrondissement,396644,17698,0.0446
-Paris 11e Arrondissement,326648,13378,0.041
-Gentilly,23332,920,0.0394
-Saint-Cloud,17499,685,0.0391
-Vincennes,58330,2200,0.0377
-Saint-Mandé,40831,1529,0.0374
-Paris 15e Arrondissement,519137,19278,0.0371
-Issy-les-Moulineaux,128326,4764,0.0371
-Nanterre,46664,1669,0.0358
-Pantin,122493,3670,0.03
-Vitry-sur-Seine,99161,2937,0.0296
-Arcueil,23437,693,0.0296
-Ivry-sur-Seine,104994,2724,0.0259
-Courbevoie,40831,1029,0.0252
-Neuilly-sur-Seine,75829,1815,0.0239
-La Garenne-Colombes,40831,970,0.0238
-Puteaux,17499,416,0.0238
-Saint-Denis,110827,2545,0.023
-Clichy,75829,1379,0.0182
-Joinville-le-Pont,11666,212,0.0182
-Rosny-sous-Bois,23332,420,0.018
-Asnières-sur-Seine,75829,1354,0.0179
-Chevilly-Larue,17499,309,0.0177
-Nogent-sur-Marne,23332,407,0.0174
-Saint-Maurice,17499,288,0.0165
-Villeneuve-la-Garenne,17499,268,0.0153
-Argenteuil,40831,620,0.0152
-Cachan,23332,346,0.0148
-Charenton-le-Pont,29165,422,0.0145
-Levallois-Perret,64163,857,0.0134
-Boulogne-Billancourt,174990,2278,0.013
-Choisy-le-Roi,17499,219,0.0125
-Saint-Ouen-sur-Seine,64163,805,0.0125
-Gennevilliers,34998,435,0.0124
-Bois-Colombes,11666,134,0.0115
-Aubervilliers,75829,739,0.0097
-Maisons-Alfort,40831,383,0.0094
-Alfortville,29165,232,0.008
-La Courneuve,17499,134,0.0077
-Noisy-le-Sec,11666,86,0.0074
-Thiais,17499,111,0.0063
-L'Île-Saint-Denis,5833,37,0.0063
-Champigny-sur-Marne,29165,185,0.0063
-Orly,17499,111,0.0063
+Bourg-la-Reine,25584,4743,0.1854
+Colombes,38376,6740,0.1756
+Bobigny,38376,6604,0.1721
+Suresnes,63960,10914,0.1706
+Paris 20e Arrondissement,441324,71512,0.162
+Paris 8e Arrondissement,338985,53830,0.1588
+Les Lilas,25584,3854,0.1506
+Chaville,19188,2767,0.1442
+Bagnolet,51168,7225,0.1412
+Paris 9e Arrondissement,294214,41138,0.1398
+Sèvres,38376,5019,0.1308
+Paris 2e Arrondissement,154855,19887,0.1284
+Paris 18e Arrondissement,396552,45189,0.114
+Le Pré-Saint-Gervais,13460,1517,0.1127
+Villejuif,70356,7715,0.1097
+Romainville,38376,4169,0.1086
+Paris 3e Arrondissement,95940,10239,0.1067
+Meudon,31980,3345,0.1046
+Paris 10e Arrondissement,338986,34695,0.1023
+Montrouge,83148,8070,0.0971
+Clamart,19188,1840,0.0959
+Châtillon,38376,3663,0.0955
+Vanves,44772,4145,0.0926
+Paris 19e Arrondissement,383759,34375,0.0896
+Garches,31980,2841,0.0888
+Fontenay-sous-Bois,76752,6664,0.0868
+Fontenay-aux-Roses,25584,2151,0.0841
+Malakoff,51168,4185,0.0818
+Ville-d'Avray,12792,1020,0.0797
+Bagneux,31980,2472,0.0773
+Rueil-Malmaison,63960,4766,0.0745
+Paris 7e Arrondissement,191880,13901,0.0724
+Paris 14e Arrondissement,345384,24293,0.0703
+Le Kremlin-Bicêtre,31980,2135,0.0668
+Paris 1er Arrondissement,166296,10839,0.0652
+Montreuil,147108,9199,0.0625
+Paris 5e Arrondissement,230255,14050,0.061
+Paris 4e Arrondissement,166085,10048,0.0605
+Paris 16e Arrondissement,396552,23539,0.0594
+Arcueil,26252,1435,0.0547
+Paris 17e Arrondissement,402948,21222,0.0527
+Créteil,108732,5694,0.0524
+Paris 13e Arrondissement,441323,22134,0.0502
+Sceaux,25584,1249,0.0488
+Gentilly,25584,1129,0.0441
+Chevilly-Larue,19188,838,0.0437
+Paris 6e Arrondissement,217464,9492,0.0436
+Paris 12e Arrondissement,434924,18877,0.0434
+Vincennes,63960,2726,0.0426
+Paris 11e Arrondissement,358174,15150,0.0423
+Issy-les-Moulineaux,140711,5781,0.0411
+Paris 15e Arrondissement,569242,22219,0.039
+Saint-Cloud,19188,697,0.0363
+Vitry-sur-Seine,108732,3918,0.036
+Nanterre,51168,1834,0.0358
+Saint-Mandé,44772,1589,0.0355
+Pantin,134316,4125,0.0307
+Ivry-sur-Seine,115128,3450,0.03
+La Garenne-Colombes,44772,1272,0.0284
+Courbevoie,44772,1111,0.0248
+Neuilly-sur-Seine,83148,1951,0.0235
+Asnières-sur-Seine,83148,1855,0.0223
+Puteaux,19188,428,0.0223
+Saint-Maurice,19188,417,0.0217
+Saint-Denis,121524,2627,0.0216
+Bois-Colombes,12792,263,0.0206
+Clichy,83148,1563,0.0188
+Joinville-le-Pont,12792,220,0.0172
+Rosny-sous-Bois,25584,436,0.017
+Nogent-sur-Marne,25584,423,0.0165
+Charenton-le-Pont,31980,469,0.0147
+Villeneuve-la-Garenne,19188,280,0.0146
+Argenteuil,44772,648,0.0145
+Cachan,25584,362,0.0141
+Boulogne-Billancourt,191879,2607,0.0136
+Saint-Ouen-sur-Seine,70356,949,0.0135
+Levallois-Perret,70356,914,0.013
+Gennevilliers,38376,468,0.0122
+Choisy-le-Roi,19188,231,0.012
+Aubervilliers,83148,946,0.0114
+Champigny-sur-Marne,31980,351,0.011
+Maisons-Alfort,44772,449,0.01
+Alfortville,31980,252,0.0079
+La Courneuve,19188,146,0.0076
+Noisy-le-Sec,12792,94,0.0073
+Orly,19188,123,0.0064
+Thiais,19188,123,0.0064
+L'Île-Saint-Denis,6396,41,0.0064
