@@ -4,10 +4,23 @@ import { Link } from "react-router-dom";
 import "leaflet/dist/leaflet.css";
 import type { StationSummary } from "../api/types";
 import { ETAT_COLORS, ETAT_LABELS } from "../constants/etat";
+import { useTheme } from "../hooks/useTheme";
 
 const PARIS_CENTER: [number, number] = [48.8566, 2.3522];
 
+// Tuiles OpenStreetMap standard (gratuites, sans clé). Le mode sombre
+// s'obtient en filtrant le calque de tuiles en CSS (.leaflet-tile-pane,
+// voir index.css) plutôt que via un second fournisseur de tuiles "dark" :
+// les quelques services gratuits de ce type (CARTO notamment) exigent
+// désormais une clé API, ce qu'on veut éviter pour rester cohérent avec
+// le reste du projet (open data, sans clé).
+const OSM_TILE_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+const OSM_ATTRIBUTION =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
 export function StationMap({ stations }: { stations: StationSummary[] }) {
+  const theme = useTheme();
+
   return (
     <MapContainer
       center={PARIS_CENTER}
@@ -15,22 +28,19 @@ export function StationMap({ stations }: { stations: StationSummary[] }) {
       preferCanvas
       style={{ height: "100%", width: "100%", borderRadius: "var(--radius-lg)" }}
     >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
+      <TileLayer attribution={OSM_ATTRIBUTION} url={OSM_TILE_URL} />
       {stations.map((station) => {
         const color = ETAT_COLORS[station.etat];
         return (
           <CircleMarker
             key={station.station_id}
             center={[station.lat, station.lon]}
-            radius={6}
+            radius={6.5}
             pathOptions={{
-              color,
+              color: theme === "dark" ? "#091414" : "#ffffff",
               fillColor: color,
-              fillOpacity: 0.85,
-              weight: 1,
+              fillOpacity: 0.92,
+              weight: 1.25,
             }}
           >
             <Popup minWidth={180}>
@@ -53,7 +63,7 @@ export function StationMap({ stations }: { stations: StationSummary[] }) {
                   {ETAT_LABELS[station.etat]}
                 </span>
                 {station.num_mechanical !== null && station.num_ebike !== null && (
-                  <span style={{ fontSize: "0.82rem", color: "#58566f" }}>
+                  <span style={{ fontSize: "0.82rem", color: "#4c5f5d" }}>
                     {station.num_mechanical} mécaniques · {station.num_ebike} électriques
                   </span>
                 )}

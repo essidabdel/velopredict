@@ -2,7 +2,7 @@ import { Bike, CircleParking, LayoutDashboard, PieChart, Radar } from "lucide-re
 import { fetchStations, fetchStatsOverview } from "../api/client";
 import {
   BikeTypeChart,
-  EtatBreakdownChart,
+  StatusCompositionBar,
   TopCommunesVidesChart,
 } from "../components/DashboardCharts";
 import { ErrorState } from "../components/ErrorState";
@@ -41,6 +41,7 @@ export function DashboardPage() {
         </span>
         Tableau de bord
       </h1>
+      <p className="page-lede">Vue d'ensemble du réseau Vélib', mise à jour toutes les 60 secondes.</p>
 
       {error && <ErrorState message={error} onRetry={() => { reloadStats(); reloadStations(); }} />}
 
@@ -67,7 +68,7 @@ export function DashboardPage() {
       )}
 
       {!error && stats && (
-        <section style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-4)" }}>
+        <section className="rise-in" style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-4)" }}>
           <StatTile
             label="Vélos disponibles (réseau)"
             value={stats.total_bikes_available}
@@ -97,12 +98,12 @@ export function DashboardPage() {
 
       {!error && stations && (
         <>
-          <section className="card">
+          <section className="card rise-in">
             <h2 className="section-title">
               <PieChart size={18} />
               Répartition des stations par état
             </h2>
-            <EtatBreakdownChart stations={stations} />
+            <StatusCompositionBar stations={stations} />
           </section>
 
           <div
@@ -113,7 +114,7 @@ export function DashboardPage() {
             }}
           >
             {stats && (
-              <section className="card">
+              <section className="card rise-in">
                 <h2 className="section-title">
                   <Bike size={18} />
                   Vélos mécaniques vs électriques
@@ -121,7 +122,7 @@ export function DashboardPage() {
                 <BikeTypeChart stats={stats} />
               </section>
             )}
-            <section className="card">
+            <section className="card rise-in">
               <h2 className="section-title">
                 <CircleParking size={18} />
                 Communes avec le plus de stations vides

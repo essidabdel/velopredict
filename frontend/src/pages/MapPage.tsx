@@ -30,9 +30,11 @@ export function MapPage() {
         </span>
         Carte des stations
       </h1>
+      <p className="page-lede">
+        La disponibilité des vélos Vélib', station par station, autour de Paris.
+      </p>
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
         <FilterBar filters={filters} onChange={setFilters} />
-        <MapLegend />
 
         {error && <ErrorState message={error} onRetry={reload} />}
         {!error && loading && !stations && <LoadingState label="Chargement des stations…" />}
@@ -54,25 +56,14 @@ export function MapPage() {
           </div>
         )}
         {!error && stations && stations.length > 0 && (
-          <>
-            <span
-              className="chip"
-              style={{
-                background: "color-mix(in srgb, var(--brand) 10%, transparent)",
-                color: "var(--brand-dark)",
-                alignSelf: "flex-start",
-              }}
-            >
+          <div className="map-wrap rise-in" style={{ height: "min(78vh, 760px)", minHeight: 420 }}>
+            <StationMap stations={stations} />
+            <MapLegend floating />
+            <span className="map-overlay map-count-overlay chip" style={{ color: "var(--brand-dark)" }}>
               <RadioTower size={14} />
-              {stations.length} station{stations.length > 1 ? "s" : ""} — actualisation auto. toutes
-              les 60s
+              {stations.length} station{stations.length > 1 ? "s" : ""} · maj 60s
             </span>
-            <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-              <div style={{ height: "min(70vh, 640px)", minHeight: 360 }}>
-                <StationMap stations={stations} />
-              </div>
-            </div>
-          </>
+          </div>
         )}
       </div>
     </div>
