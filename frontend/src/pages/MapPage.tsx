@@ -1,3 +1,4 @@
+import { MapIcon, RadioTower } from "lucide-react";
 import { useCallback } from "react";
 import { fetchStations } from "../api/client";
 import { ErrorState } from "../components/ErrorState";
@@ -23,7 +24,12 @@ export function MapPage() {
 
   return (
     <div>
-      <h1 className="page-title">Carte des stations</h1>
+      <h1 className="page-title">
+        <span className="page-title-icon">
+          <MapIcon size={22} />
+        </span>
+        Carte des stations
+      </h1>
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
         <FilterBar filters={filters} onChange={setFilters} />
         <MapLegend />
@@ -32,12 +38,22 @@ export function MapPage() {
         {!error && loading && !stations && <LoadingState label="Chargement des stations…" />}
         {!error && stations && (
           <>
-            <p className="text-muted" style={{ margin: 0 }}>
-              {stations.length} station{stations.length > 1 ? "s" : ""} — actualisation
-              automatique toutes les 60 secondes.
-            </p>
-            <div style={{ height: "min(70vh, 640px)", minHeight: 360 }}>
-              <StationMap stations={stations} />
+            <span
+              className="chip"
+              style={{
+                background: "color-mix(in srgb, var(--brand) 10%, transparent)",
+                color: "var(--brand-dark)",
+                alignSelf: "flex-start",
+              }}
+            >
+              <RadioTower size={14} />
+              {stations.length} station{stations.length > 1 ? "s" : ""} — actualisation auto. toutes
+              les 60s
+            </span>
+            <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+              <div style={{ height: "min(70vh, 640px)", minHeight: 360 }}>
+                <StationMap stations={stations} />
+              </div>
             </div>
           </>
         )}

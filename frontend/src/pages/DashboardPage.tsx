@@ -1,3 +1,4 @@
+import { Bike, CircleParking, LayoutDashboard, PieChart, Radar } from "lucide-react";
 import { fetchStations, fetchStatsOverview } from "../api/client";
 import {
   BikeTypeChart,
@@ -34,32 +35,52 @@ export function DashboardPage() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-5)" }}>
-      <h1 className="page-title">Tableau de bord</h1>
+      <h1 className="page-title">
+        <span className="page-title-icon">
+          <LayoutDashboard size={22} />
+        </span>
+        Tableau de bord
+      </h1>
 
       {error && <ErrorState message={error} onRetry={() => { reloadStats(); reloadStations(); }} />}
       {!error && loading && <LoadingState label="Chargement du tableau de bord…" />}
 
       {!error && stats && (
         <section style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-4)" }}>
-          <StatTile label="Vélos disponibles (réseau)" value={stats.total_bikes_available} />
+          <StatTile
+            label="Vélos disponibles (réseau)"
+            value={stats.total_bikes_available}
+            accent="var(--status-good)"
+            icon={<Bike size={20} />}
+          />
           <StatTile
             label="Stations vides"
             value={stats.nb_stations_vides}
             accent="var(--status-critical)"
+            icon={<CircleParking size={20} />}
           />
           <StatTile
             label="Stations pleines"
             value={stats.nb_stations_pleines}
             accent="var(--series-1)"
+            icon={<CircleParking size={20} />}
           />
-          <StatTile label="Stations suivies" value={`${stats.nb_stations_avec_etat} / ${stats.nb_stations}`} />
+          <StatTile
+            label="Stations suivies"
+            value={`${stats.nb_stations_avec_etat} / ${stats.nb_stations}`}
+            accent="var(--brand)"
+            icon={<Radar size={20} />}
+          />
         </section>
       )}
 
       {!error && stations && (
         <>
           <section className="card">
-            <h2 className="section-title">Répartition des stations par état</h2>
+            <h2 className="section-title">
+              <PieChart size={18} />
+              Répartition des stations par état
+            </h2>
             <EtatBreakdownChart stations={stations} />
           </section>
 
@@ -72,12 +93,18 @@ export function DashboardPage() {
           >
             {stats && (
               <section className="card">
-                <h2 className="section-title">Vélos mécaniques vs électriques</h2>
+                <h2 className="section-title">
+                  <Bike size={18} />
+                  Vélos mécaniques vs électriques
+                </h2>
                 <BikeTypeChart stats={stats} />
               </section>
             )}
             <section className="card">
-              <h2 className="section-title">Communes avec le plus de stations vides</h2>
+              <h2 className="section-title">
+                <CircleParking size={18} />
+                Communes avec le plus de stations vides
+              </h2>
               <p className="text-muted" style={{ marginTop: 0, fontSize: "0.85rem" }}>
                 Instantané actuel — pas une moyenne historique.
               </p>

@@ -592,8 +592,13 @@ impact sur l'ingestion.
 
 ## Captures d'écran
 
-Prises sur le build Docker (nginx, `http://localhost:3000`) le 2026-11-10,
-avec des données réelles collectées en continu depuis la Phase 1.
+Prises sur le build Docker (nginx, `http://localhost:3000`) le 2026-11-12,
+avec des données réelles collectées en continu depuis la Phase 1. Design
+revu (Phase 6 bis) : typographie Inter/Lexend, palette violette de marque
+distincte des couleurs d'état/données, cartes avec ombres et coins
+arrondis, icônes (lucide-react) — les couleurs qui encodent une donnée
+(état de station, séries des graphiques) restent inchangées, validées en
+Phase 6.
 
 | | |
 |---|---|
@@ -604,11 +609,10 @@ avec des données réelles collectées en continu depuis la Phase 1.
 | **À propos** — sources open data et attribution ODbL | **État d'erreur** — API arrêtée volontairement pour vérifier le message + bouton « Réessayer » |
 | ![À propos](docs/screenshots/05-a-propos.jpg) | ![Erreur API injoignable](docs/screenshots/06-erreur-api.jpg) |
 
-La fiche station ci-dessus illustre aussi une vraie interruption de
-collecte d'environ 10h40 (nuit du 9 au 10 novembre 2026, machine hôte
-probablement mise en veille) : la courbe le montre honnêtement plutôt que
-de l'interpoler, et l'API refuse la prédiction (message explicite) plutôt
-que de deviner sur un historique trop ancien.
+La fiche station ci-dessus illustre aussi le cas honnête d'une
+prédiction indisponible (historique récent encore trop court pour cette
+station) : l'API refuse de deviner plutôt que d'afficher un chiffre
+inventé, message explicite à l'appui.
 
 ## État d'avancement
 

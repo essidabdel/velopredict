@@ -1,3 +1,4 @@
+import { Activity, Battery, Bike, Gauge, MapPin, TrendingUp } from "lucide-react";
 import { useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { fetchStation, fetchStationHistory, fetchStationPrediction } from "../api/client";
@@ -54,15 +55,25 @@ export function StationPage() {
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-5)" }}>
       <div>
         <h1 className="page-title" style={{ marginBottom: "var(--space-2)" }}>
+          <span className="page-title-icon">
+            <Bike size={22} />
+          </span>
           {station.name}
         </h1>
-        <p className="text-secondary" style={{ margin: 0 }}>
+        <p
+          className="text-secondary"
+          style={{ margin: 0, display: "flex", alignItems: "center", gap: 6, paddingLeft: 2 }}
+        >
+          <MapPin size={15} />
           {station.commune_nom ?? "Commune inconnue"} · Capacité {station.capacity} places
         </p>
       </div>
 
       <section className="card">
-        <h2 className="section-title">État actuel</h2>
+        <h2 className="section-title">
+          <Activity size={18} />
+          État actuel
+        </h2>
         <div
           style={{ display: "flex", gap: "var(--space-5)", flexWrap: "wrap", alignItems: "center" }}
         >
@@ -76,7 +87,10 @@ export function StationPage() {
       </section>
 
       <section className="card">
-        <h2 className="section-title">Dernières 24 heures</h2>
+        <h2 className="section-title">
+          <Gauge size={18} />
+          Dernières 24 heures
+        </h2>
         {errorHistory && <ErrorState message={errorHistory} />}
         {!errorHistory && loadingHistory && <LoadingState label="Chargement de l'historique…" />}
         {!errorHistory && history && history.length === 0 && (
@@ -88,8 +102,16 @@ export function StationPage() {
       </section>
 
       <section className="card">
-        <h2 className="section-title">Prédiction</h2>
-        {errorPrediction && <p className="text-muted">Prédiction indisponible : {errorPrediction}</p>}
+        <h2 className="section-title">
+          <TrendingUp size={18} />
+          Prédiction
+        </h2>
+        {errorPrediction && (
+          <p className="text-muted" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <Battery size={15} />
+            Prédiction indisponible : {errorPrediction}
+          </p>
+        )}
         {!errorPrediction && loadingPrediction && <LoadingState label="Calcul de la prédiction…" />}
         {!errorPrediction && prediction && (
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
@@ -111,7 +133,16 @@ export function StationPage() {
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div>
-      <div style={{ fontSize: "1.4rem", fontWeight: 700 }}>{value}</div>
+      <div
+        style={{
+          fontFamily: "var(--font-display)",
+          fontSize: "1.4rem",
+          fontWeight: 700,
+          fontVariantNumeric: "tabular-nums",
+        }}
+      >
+        {value}
+      </div>
       <div className="text-muted" style={{ fontSize: "0.8rem" }}>
         {label}
       </div>

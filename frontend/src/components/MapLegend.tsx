@@ -8,29 +8,24 @@ export function MapLegend() {
       style={{
         display: "flex",
         flexWrap: "wrap",
-        gap: "var(--space-4)",
+        gap: "var(--space-2)",
         alignItems: "center",
         padding: "var(--space-3) var(--space-4)",
       }}
     >
-      {ETAT_ORDER.map((etat) => (
-        <span
-          key={etat}
-          style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-2)" }}
-        >
+      {ETAT_ORDER.map((etat) => {
+        const color = ETAT_COLORS[etat];
+        return (
           <span
-            aria-hidden="true"
-            style={{
-              width: 12,
-              height: 12,
-              borderRadius: "50%",
-              background: ETAT_COLORS[etat],
-              display: "inline-block",
-            }}
-          />
-          <span style={{ fontSize: "0.9rem" }}>{ETAT_LABELS[etat]}</span>
-        </span>
-      ))}
+            key={etat}
+            className="chip"
+            style={{ background: `${color}1c`, color }}
+          >
+            <span className="chip-dot" aria-hidden="true" style={{ background: color }} />
+            <span style={{ color: "var(--text-secondary)" }}>{ETAT_LABELS[etat]}</span>
+          </span>
+        );
+      })}
     </div>
   );
 }

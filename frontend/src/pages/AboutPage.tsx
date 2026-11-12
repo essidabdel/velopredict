@@ -1,10 +1,20 @@
+import { AlertTriangle, BookOpen, BrainCircuit, Database, Info, ScrollText } from "lucide-react";
+
 export function AboutPage() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-5)" }}>
-      <h1 className="page-title">À propos</h1>
+      <h1 className="page-title">
+        <span className="page-title-icon">
+          <Info size={22} />
+        </span>
+        À propos
+      </h1>
 
       <section className="card">
-        <h2 className="section-title">Le projet</h2>
+        <h2 className="section-title">
+          <BookOpen size={18} />
+          Le projet
+        </h2>
         <p>
           VéloPredict prédit la disponibilité des vélos Vélib' (Paris et communes
           voisines) à 30 et 60 minutes, station par station, à partir de données
@@ -14,7 +24,10 @@ export function AboutPage() {
       </section>
 
       <section className="card">
-        <h2 className="section-title">Sources de données (open data)</h2>
+        <h2 className="section-title">
+          <Database size={18} />
+          Sources de données (open data)
+        </h2>
         <ul style={{ paddingLeft: "1.2em", lineHeight: 1.7 }}>
           <li>
             <strong>Vélib' Métropole — GBFS</strong> (temps réel, sans clé) :{" "}
@@ -44,7 +57,10 @@ export function AboutPage() {
       </section>
 
       <section className="card">
-        <h2 className="section-title">Attribution — historique backfillé</h2>
+        <h2 className="section-title">
+          <ScrollText size={18} />
+          Attribution — historique backfillé
+        </h2>
         <p>
           Le flux GBFS officiel Vélib' est un instantané temps réel : il n'expose
           aucun historique. Pour disposer de plusieurs semaines de données réelles
@@ -68,7 +84,10 @@ export function AboutPage() {
       </section>
 
       <section className="card">
-        <h2 className="section-title">Méthode du modèle de prédiction</h2>
+        <h2 className="section-title">
+          <BrainCircuit size={18} />
+          Méthode du modèle de prédiction
+        </h2>
         <p>
           Modèle LightGBM entraîné sur un découpage strictement temporel (jamais
           aléatoire) : entraînement sur les premiers jours, test sur les derniers,
@@ -78,7 +97,7 @@ export function AboutPage() {
           station. Comparé à deux références simples (persistance et moyenne
           historique par station/heure/jour), et à une régression linéaire.
         </p>
-        <p>
+        <p style={{ marginBottom: 0 }}>
           Le niveau de risque affiché sur chaque fiche station ("faible", "moyen",
           "élevé") est calculé à partir de la prédiction à 30 minutes — jamais
           affiché comme une probabilité brute.
@@ -86,7 +105,10 @@ export function AboutPage() {
       </section>
 
       <section className="card">
-        <h2 className="section-title">Limites</h2>
+        <h2 className="section-title">
+          <AlertTriangle size={18} />
+          Limites
+        </h2>
         <ul style={{ paddingLeft: "1.2em", lineHeight: 1.7 }}>
           <li>Modèle entraîné sur une seule saison (automne) : pas de garantie de généralisation à l'été ou l'hiver.</li>
           <li>La cible prédite est le nombre total de vélos (mécaniques + électriques combinés), pas un détail par type.</li>
