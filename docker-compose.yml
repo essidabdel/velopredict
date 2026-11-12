@@ -11,6 +11,8 @@ volumes:
   kafka_data:
   timescale_data:
   redis_data:
+  airflow_db_data:
+  airflow_logs:
 
 services:
   # ---------------------------------------------------------------------
@@ -271,5 +273,133 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    networks:
+      - velopredict-network
+
+  # ---------------------------------------------------------------------
+  # Airflow (bonus Phase 7) — orchestration de l'enrichissement
+  # (météo/calendriers) et du réentraînement nocturne du modèle. PAS
+  # démarré par `docker compose up -d` : nécessite le profil "airflow".
+  #   docker compose --profile airflow up -d
+  #   docker compose --profile airflow down
+  # Metastore séparé de TimescaleDB (métier) à dessein : l'orchestrateur
+  # ne doit jamais dépendre du schéma applicatif, ni l'inverse.
+  # ---------------------------------------------------------------------
+  airflow-db:
+    image: postgres:16-alpine
+    container_name: velopredict-airflow-db
+    profiles: ["airflow"]
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: ${AIRFLOW_DB_PASSWORD:-change-me}
+      POSTGRES_DB: airflow
+    volumes:
+      - airflow_db_data:/var/lib/postgresql/data
+    networks:
+      - velopredict-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow -d airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  airflow-init:
+    build:
+      context: .
+      dockerfile: airflow/Dockerfile
+    container_name: velopredict-airflow-init
+    profiles: ["airflow"]
+    env_file: .env
+    environment: &airflow-env
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:${AIRFLOW_DB_PASSWORD:-change-me}@airflow-db:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__FERNET_KEY: ""
+      AIRFLOW__API__SECRET_KEY: ${AIRFLOW_SECRET_KEY:-change-me-too}
+      # Auth manager par défaut d'Airflow 3 (pas de FAB, pas de "airflow
+      # users create") : un utilisateur "admin:Admin" déclaré ici, mot de
+      # passe généré au premier démarrage et affiché dans les logs de
+      # l'api-server (voir la commande de vérification dans le README).
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: "${AIRFLOW_ADMIN_USER:-admin}:Admin"
+      # Airflow 3 : les tâches (exécutées par le scheduler/LocalExecutor)
+      # parlent à l'"Execution API" plutôt qu'à la base directement.
+      # Défaut = localhost:8080, faux dans un conteneur séparé de
+      # l'api-server — d'où l'échec "Connection refused" sans cette ligne.
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-apiserver:8080/execution/
+      # Signe/valide les jetons JWT que les tâches utilisent pour parler à
+      # l'Execution API (ci-dessus) : sans valeur fixe partagée, chaque
+      # conteneur en génère une différente au démarrage, et la tâche (signée
+      # par le scheduler) se fait rejeter par l'api-server ("Invalid auth
+      # token") faute de partager la même clé.
+      AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_SECRET_KEY:-change-me-too}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-velopredict}:${POSTGRES_PASSWORD:-change-me}@timescaledb:5432/${POSTGRES_DB:-velopredict}
+    command: ["db", "migrate"]
+    volumes: &airflow-volumes
+      - ./airflow/dags:/opt/airflow/dags
+      - airflow_logs:/opt/airflow/logs
+      - ./ingestion:/opt/project/ingestion:ro
+      - ./ml:/opt/project/ml
+    depends_on:
+      airflow-db:
+        condition: service_healthy
+      timescaledb:
+        condition: service_healthy
+    networks:
+      - velopredict-network
+
+  # Airflow 3 sépare le parsing des DAGs (dag-processor) du scheduler :
+  # contrairement à Airflow 2, le scheduler seul ne suffit plus.
+  airflow-dag-processor:
+    build:
+      context: .
+      dockerfile: airflow/Dockerfile
+    container_name: velopredict-airflow-dag-processor
+    profiles: ["airflow"]
+    restart: unless-stopped
+    command: dag-processor
+    env_file: .env
+    environment: *airflow-env
+    volumes: *airflow-volumes
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    networks:
+      - velopredict-network
+
+  airflow-apiserver:
+    build:
+      context: .
+      dockerfile: airflow/Dockerfile
+    container_name: velopredict-airflow-apiserver
+    profiles: ["airflow"]
+    restart: unless-stopped
+    command: api-server
+    env_file: .env
+    environment: *airflow-env
+    ports:
+      - "${AIRFLOW_PORT:-8080}:8080"
+    volumes: *airflow-volumes
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    networks:
+      - velopredict-network
+
+  airflow-scheduler:
+    build:
+      context: .
+      dockerfile: airflow/Dockerfile
+    container_name: velopredict-airflow-scheduler
+    profiles: ["airflow"]
+    restart: unless-stopped
+    command: scheduler
+    env_file: .env
+    environment: *airflow-env
+    volumes: *airflow-volumes
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
     networks:
       - velopredict-network

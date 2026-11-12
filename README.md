@@ -20,6 +20,7 @@ Projet réalisé dans le cadre du module **Open Data** (IPSSI) — Sujet 4
 - [Analyses (Phase 4)](#analyses-phase-4)
 - [Connecter Power BI](#connecter-power-bi)
 - [Outils d'inspection (démo / présentation)](#outils-dinspection-démo--présentation)
+- [Airflow — orchestration (bonus Phase 7)](#airflow--orchestration-bonus-phase-7)
 - [Vérifier que tout fonctionne](#vérifier-que-tout-fonctionne)
 - [Captures d'écran](#captures-décran)
 - [État d'avancement](#état-davancement)
@@ -555,6 +556,74 @@ docker compose --profile tools down    # les arrête (le reste continue de tourn
 > (Kafka conserve les messages, les inserts sont idempotents). Les
 > conteneurs `kafka`/`timescaledb`/`redis` eux-mêmes ne redémarrent pas.
 
+## Airflow — orchestration (bonus Phase 7)
+
+Orchestre deux tâches récurrentes (enrichissement, réentraînement) plus
+une tâche manuelle (référentiel stations), comme prévu dans
+l'architecture cible du `CLAUDE.md`. **Pas démarré** par
+`docker compose up -d` (profil Docker séparé — Airflow + son metastore
+PostgreSQL dédié sont lourds pour un bonus optionnel) :
+
+```bash
+docker compose --profile airflow up -d     # démarre Airflow (~1-2 min au premier lancement)
+docker compose --profile airflow down      # l'arrête (le reste continue de tourner)
+```
+
+Interface : **http://localhost:8080**. Identifiant `admin`, mot de passe
+généré au premier démarrage et affiché une seule fois dans les logs :
+
+```bash
+docker compose logs airflow-apiserver | grep "Password for user"
+```
+
+(Si tu as perdu ce mot de passe après un `docker compose --profile airflow down -v` qui supprime le volume `airflow_db_data`, un nouveau sera régénéré et réaffiché au prochain démarrage.)
+
+| DAG | Planning | Rôle |
+|---|---|---|
+| `enrichissement_quotidien` | tous les jours à 03:00 UTC | Rafraîchit météo (prévisions + historique) et calendriers |
+| `reentrainement_modele` | tous les jours à 03:30 UTC | Relance `ml.retrain` sur tout l'historique disponible — écrit les nouveaux `.joblib` dans `ml/models/`, lus directement par l'API (redémarrer `api` pour les servir) |
+| `maj_referentiel_stations` | déclenchement manuel uniquement | Référentiel des stations + géocodage commune/arrondissement (rarement nécessaire, ~6-8 min) |
+
+Un DAG nouvellement créé est **en pause par défaut** (comportement
+standard Airflow, pas un bug) : bascule l'interrupteur dans l'interface,
+ou en CLI :
+
+```bash
+docker compose exec airflow-scheduler airflow dags unpause reentrainement_modele
+docker compose exec airflow-scheduler airflow dags trigger reentrainement_modele   # test immédiat
+docker compose exec airflow-scheduler airflow dags list-runs -d reentrainement_modele
+```
+
+### Choix techniques et pièges résolus
+
+- **Airflow 3.4 plutôt que 2.x** : Airflow 2.x (même 2.11.2, la dernière
+  version 2.x) impose SQLAlchemy 1.4, incompatible avec le
+  `pd.read_sql` de pandas 2.2+ (`AttributeError: 'Engine' object has no
+  attribute 'cursor'`). Airflow 3 utilise SQLAlchemy 2.0, qui résout le
+  problème — mais change l'architecture : webserver → `api-server`,
+  scheduler qui ne parse plus les DAGs seul → `dag-processor` séparé
+  (les deux sont déployés ici), et un nouveau système de jetons JWT entre
+  les tâches et l'API (`AIRFLOW__API_AUTH__JWT_SECRET` doit être
+  identique sur tous les conteneurs Airflow, sinon `Invalid auth token`).
+- **Image Airflow étendue (`airflow/Dockerfile`)**, pas un conteneur par
+  script : `ingestion.weather`, `ingestion.calendar_days` et `ml.retrain`
+  tournent directement dans l'image Airflow via `BashOperator`.
+  `airflow/requirements.txt` est volontairement **différent** de
+  `ingestion/requirements.txt`/`ml/requirements.txt` : sans SQLAlchemy ni
+  psycopg2-binary (fournis par Airflow + son provider Postgres — les
+  réinstaller casse l'ORM interne d'Airflow), mais avec les **mêmes**
+  versions de numpy/pandas/scikit-learn/joblib/lightgbm que
+  `ml/requirements.txt` = `api/requirements.txt` : ce sont elles qui
+  (dé)sérialisent les `.joblib`, un écart entre l'environnement qui
+  entraîne et celui qui sert le modèle est le genre de bug qui ne se voit
+  qu'au chargement.
+- **`libgomp1`** (runtime OpenMP) ajouté via `apt-get` : LightGBM le
+  charge au premier import, absent de l'image Airflow de base.
+- Testé de bout en bout : les deux DAGs planifiés ont réellement tourné
+  avec succès (requêtes Open-Meteo/calendrier.api.gouv.fr en direct pour
+  le premier ; features sur ~9,4M lignes + entraînement + graphiques SHAP
+  pour le second, ~5min30).
+
 ## Vérifier que tout fonctionne
 
 ```bash
@@ -672,6 +741,9 @@ inventé, message explicite à l'appui.
       bord, page À propos avec attribution ODbL, états de chargement/
       erreur, frontend ajouté au `docker-compose.yml` — voir
       [Captures d'écran](#captures-décran)
-- [ ] Phase 7 — Bonus Big Data (PySpark, Airflow)
+- [x] Phase 7 (partiel) — Bonus Big Data : orchestration Airflow faite
+      (enrichissement quotidien + réentraînement nocturne du modèle, voir
+      [Airflow — orchestration](#airflow--orchestration-bonus-phase-7)) ;
+      PySpark Structured Streaming pas encore fait
 
 Chaque phase est validée avant de passer à la suivante (voir `CLAUDE.md`).
