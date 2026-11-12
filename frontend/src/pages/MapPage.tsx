@@ -1,4 +1,4 @@
-import { MapIcon, RadioTower } from "lucide-react";
+import { MapIcon, RadioTower, SearchX } from "lucide-react";
 import { useCallback } from "react";
 import { fetchStations } from "../api/client";
 import { ErrorState } from "../components/ErrorState";
@@ -36,7 +36,24 @@ export function MapPage() {
 
         {error && <ErrorState message={error} onRetry={reload} />}
         {!error && loading && !stations && <LoadingState label="Chargement des stations…" />}
-        {!error && stations && (
+        {!error && stations && stations.length === 0 && (
+          <div className="card empty-state">
+            <span
+              className="icon-badge"
+              style={{
+                background: "color-mix(in srgb, var(--brand) 12%, transparent)",
+                color: "var(--brand)",
+              }}
+            >
+              <SearchX size={22} />
+            </span>
+            <p style={{ margin: 0, fontWeight: 650, color: "var(--text-primary)" }}>
+              Aucune station ne correspond à ces filtres
+            </p>
+            <p style={{ margin: 0 }}>Essaie d'élargir la recherche ou réinitialise les filtres.</p>
+          </div>
+        )}
+        {!error && stations && stations.length > 0 && (
           <>
             <span
               className="chip"

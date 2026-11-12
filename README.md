@@ -399,10 +399,16 @@ pip install -r ml/requirements.txt && python -m ml.retrain  # entraîne le modè
     vides).
   - **À propos** (`/about`) — sources open data, attribution ODbL, méthode
     et limites du modèle.
-  - États de chargement et d'erreur gérés sur chaque page (message clair +
-    bouton « Réessayer » si l'API est injoignable, voir
-    [captures d'écran](#captures-décran)) ; design responsive (testé en
-    largeur mobile).
+  - États de chargement (squelettes à la forme du contenu final, pas un
+    simple spinner générique) et d'erreur gérés sur chaque page (message
+    clair + bouton « Réessayer » si l'API est injoignable, voir
+    [captures d'écran](#captures-décran)) ; état vide dédié quand des
+    filtres ne renvoient aucune station.
+  - Design responsive avec nav mobile dédiée (menu plein écran sous
+    760px, pas un simple retour à la ligne) ; mode sombre (suit la
+    préférence système, bascule mémorisée en `localStorage`) ;
+    accessibilité clavier (lien d'évitement, focus visible partout,
+    animations réduites si `prefers-reduced-motion`).
 - **Lancement** :
   ```bash
   docker compose up -d --build frontend   # http://localhost:3000 (nginx)
@@ -594,10 +600,12 @@ impact sur l'ingestion.
 
 Prises sur le build Docker (nginx, `http://localhost:3000`) le 2026-11-12,
 avec des données réelles collectées en continu depuis la Phase 1. Design
-revu (Phase 6 bis) : typographie Inter/Lexend, palette violette de marque
-distincte des couleurs d'état/données, cartes avec ombres et coins
-arrondis, icônes (lucide-react) — les couleurs qui encodent une donnée
-(état de station, séries des graphiques) restent inchangées, validées en
+revu en deux passes : identité visuelle (Phase 6 bis — typographie Inter/
+Lexend, palette violette de marque distincte des couleurs d'état/données,
+cartes avec ombres et coins arrondis, icônes lucide-react) puis finitions
+UX (Phase 6 ter — mode sombre, menu mobile, squelettes de chargement,
+états vides, accessibilité). Les couleurs qui encodent une donnée (état
+de station, séries des graphiques) n'ont jamais changé, validées en
 Phase 6.
 
 | | |
@@ -608,6 +616,8 @@ Phase 6.
 | ![Fiche station](docs/screenshots/03-fiche-station.jpg) | ![Tableau de bord](docs/screenshots/04-tableau-de-bord.jpg) |
 | **À propos** — sources open data et attribution ODbL | **État d'erreur** — API arrêtée volontairement pour vérifier le message + bouton « Réessayer » |
 | ![À propos](docs/screenshots/05-a-propos.jpg) | ![Erreur API injoignable](docs/screenshots/06-erreur-api.jpg) |
+| **Mode sombre** — bascule mémorisée (localStorage), suit aussi la préférence système par défaut | |
+| ![Tableau de bord en mode sombre](docs/screenshots/07-mode-sombre.jpg) | |
 
 La fiche station ci-dessus illustre aussi le cas honnête d'une
 prédiction indisponible (historique récent encore trop court pour cette

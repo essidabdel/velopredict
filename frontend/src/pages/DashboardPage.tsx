@@ -6,7 +6,7 @@ import {
   TopCommunesVidesChart,
 } from "../components/DashboardCharts";
 import { ErrorState } from "../components/ErrorState";
-import { LoadingState } from "../components/LoadingState";
+import { ChartCardSkeleton, StatTileSkeleton } from "../components/Skeleton";
 import { StatTile } from "../components/StatTile";
 import { useResource } from "../hooks/useResource";
 
@@ -43,7 +43,28 @@ export function DashboardPage() {
       </h1>
 
       {error && <ErrorState message={error} onRetry={() => { reloadStats(); reloadStations(); }} />}
-      {!error && loading && <LoadingState label="Chargement du tableau de bord…" />}
+
+      {!error && loading && (
+        <>
+          <section style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-4)" }}>
+            <StatTileSkeleton key="skel-bikes" />
+            <StatTileSkeleton key="skel-vides" />
+            <StatTileSkeleton key="skel-pleines" />
+            <StatTileSkeleton key="skel-suivies" />
+          </section>
+          <ChartCardSkeleton />
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+              gap: "var(--space-4)",
+            }}
+          >
+            <ChartCardSkeleton height={160} />
+            <ChartCardSkeleton height={160} />
+          </div>
+        </>
+      )}
 
       {!error && stats && (
         <section style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-4)" }}>

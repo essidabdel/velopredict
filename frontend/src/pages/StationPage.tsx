@@ -5,8 +5,8 @@ import { fetchStation, fetchStationHistory, fetchStationPrediction } from "../ap
 import { AvailabilityChart } from "../components/AvailabilityChart";
 import { EtatBadge } from "../components/EtatBadge";
 import { ErrorState } from "../components/ErrorState";
-import { LoadingState } from "../components/LoadingState";
 import { RiskBadge } from "../components/RiskBadge";
+import { ChartCardSkeleton, Skeleton } from "../components/Skeleton";
 import { useResource } from "../hooks/useResource";
 
 const POLL_MS = 60_000;
@@ -46,7 +46,17 @@ export function StationPage() {
   }
 
   if (loadingStation && !station) {
-    return <LoadingState label="Chargement de la station…" />;
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-5)" }}>
+        <div>
+          <Skeleton width="55%" height={32} style={{ marginBottom: "var(--space-2)" }} />
+          <Skeleton width="35%" height={16} />
+        </div>
+        <ChartCardSkeleton height={60} />
+        <ChartCardSkeleton height={220} />
+        <ChartCardSkeleton height={60} />
+      </div>
+    );
   }
 
   if (!station) return null;
@@ -92,7 +102,7 @@ export function StationPage() {
           Dernières 24 heures
         </h2>
         {errorHistory && <ErrorState message={errorHistory} />}
-        {!errorHistory && loadingHistory && <LoadingState label="Chargement de l'historique…" />}
+        {!errorHistory && loadingHistory && <Skeleton height={220} radius="var(--radius)" />}
         {!errorHistory && history && history.length === 0 && (
           <p className="text-muted">Pas encore assez d'historique pour cette station.</p>
         )}
@@ -112,7 +122,13 @@ export function StationPage() {
             Prédiction indisponible : {errorPrediction}
           </p>
         )}
-        {!errorPrediction && loadingPrediction && <LoadingState label="Calcul de la prédiction…" />}
+        {!errorPrediction && loadingPrediction && (
+          <div style={{ display: "flex", gap: "var(--space-5)", flexWrap: "wrap" }}>
+            <Skeleton width={70} height={34} />
+            <Skeleton width={70} height={34} />
+            <Skeleton width={70} height={34} />
+          </div>
+        )}
         {!errorPrediction && prediction && (
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
             <div style={{ display: "flex", gap: "var(--space-5)", flexWrap: "wrap" }}>

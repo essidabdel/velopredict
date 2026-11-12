@@ -9,6 +9,7 @@
   --text-muted: #8b89a0;
   --gridline: #e5e4f0;
   --border: rgba(22, 21, 43, 0.09);
+  --overlay-scrim: rgba(15, 14, 26, 0.45);
 
   /* Couleurs de données (palette validée - ne jamais réutiliser pour le chrome UI) */
   --series-1: #2a78d6;
@@ -48,6 +49,45 @@
   --transition: 160ms cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 
+/* Mode sombre : suit le système par défaut, overridable via le bouton de
+   thème (attribut data-theme posé sur <html>, persisté en localStorage).
+   Les couleurs de données (état des stations, séries des graphiques) ne
+   changent pas : déjà assez saturées/claires pour rester lisibles sur fond
+   sombre. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --surface-0: #110f1f;
+    --surface-1: #1b1930;
+    --surface-2: #211f3a;
+    --surface-3: #2a2850;
+    --text-primary: #f3f2fb;
+    --text-secondary: #bcb9da;
+    --text-muted: #8d8ab3;
+    --gridline: #332f5c;
+    --border: rgba(255, 255, 255, 0.09);
+    --overlay-scrim: rgba(0, 0, 0, 0.6);
+    --brand-light: #b298ff;
+    --brand-ring: rgba(178, 152, 255, 0.22);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-0: #110f1f;
+  --surface-1: #1b1930;
+  --surface-2: #211f3a;
+  --surface-3: #2a2850;
+  --text-primary: #f3f2fb;
+  --text-secondary: #bcb9da;
+  --text-muted: #8d8ab3;
+  --gridline: #332f5c;
+  --border: rgba(255, 255, 255, 0.09);
+  --overlay-scrim: rgba(0, 0, 0, 0.6);
+  --brand-light: #b298ff;
+  --brand-ring: rgba(178, 152, 255, 0.22);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -68,6 +108,23 @@ body {
     var(--surface-0);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
+  transition: background-color var(--transition), color var(--transition);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) body {
+    background:
+      radial-gradient(1100px 480px at 12% -10%, rgba(124, 58, 237, 0.18), transparent 60%),
+      radial-gradient(900px 420px at 100% 0%, rgba(42, 120, 214, 0.14), transparent 55%),
+      var(--surface-0);
+  }
+}
+
+:root[data-theme="dark"] body {
+  background:
+    radial-gradient(1100px 480px at 12% -10%, rgba(124, 58, 237, 0.18), transparent 60%),
+    radial-gradient(900px 420px at 100% 0%, rgba(42, 120, 214, 0.14), transparent 55%),
+    var(--surface-0);
 }
 
 a {
@@ -359,6 +416,163 @@ select.input:focus {
 
 .fade-in {
   animation: fade-in 280ms ease-out;
+}
+
+/* Respecte la préférence système "réduire les animations" */
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 1.6s;
+  }
+  .fade-in,
+  .card,
+  .btn,
+  .skeleton {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Squelettes de chargement : occupent la forme du contenu final plutôt
+   qu'un centrage générique, pour une sensation "déjà là" le temps du
+   premier chargement. */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-3);
+  border-radius: var(--radius-sm);
+  isolation: isolate;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--surface-1) 70%, transparent),
+    transparent
+  );
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* Accessibilité : lien d'évitement et focus clavier visible partout */
+.skip-link {
+  position: absolute;
+  top: -48px;
+  left: var(--space-4);
+  z-index: 2000;
+  background: var(--brand-gradient);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: var(--radius);
+  font-weight: 650;
+  text-decoration: none;
+  box-shadow: var(--shadow-md);
+  transition: top var(--transition);
+}
+
+.skip-link:focus {
+  top: var(--space-3);
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Bascule de thème + menu mobile */
+.icon-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+
+.icon-toggle:hover {
+  background: var(--surface-3);
+  color: var(--brand-dark);
+}
+
+.nav-scrim {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-scrim);
+  z-index: 998;
+  animation: fade-in 180ms ease-out;
+}
+
+.nav-links {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.nav-toggle-btn {
+  display: none;
+}
+
+.nav-panel-mobile {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999;
+  width: min(300px, 84vw);
+  background: var(--surface-1);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-5) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  animation: slide-in 200ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 760px) {
+  .nav-links {
+    display: none;
+  }
+  .nav-toggle-btn {
+    display: inline-flex;
+  }
+}
+
+/* État vide (résultats de filtre nuls, etc.) */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  text-align: center;
+  padding: var(--space-7) var(--space-5);
+  color: var(--text-muted);
 }
 
 /* Carte Leaflet : coins arrondis + popups alignés au design du site */
