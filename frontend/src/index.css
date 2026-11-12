@@ -649,6 +649,29 @@ select.input:focus {
   overflow: hidden;
 }
 
+/* La carte est le sujet de la page, pas un bloc parmi d'autres : elle
+   sort du conteneur centré (max-width: 1280px) et s'étend jusqu'aux
+   bords du viewport - le traitement "hero" plutôt que "contenu dans une
+   carte de plus". Repasse en largeur normale sous 900px : un
+   dépassement de viewport plein cadre ne vaut rien sur petit écran, où
+   la carte perd ses coins arrondis et devient difficile à démarquer du
+   reste. */
+@media (min-width: 900px) {
+  .map-fullbleed {
+    width: 100vw;
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+    padding: 0 var(--space-6);
+  }
+
+  .map-fullbleed .map-wrap {
+    border-radius: var(--radius-lg);
+  }
+}
+
 .map-overlay {
   position: absolute;
   z-index: 420;

@@ -56,14 +56,16 @@ export function MapPage() {
           </div>
         )}
         {!error && stations && stations.length > 0 && (
-          <div className="map-wrap rise-in" style={{ height: "min(78vh, 760px)", minHeight: 420 }}>
-            <StationMap stations={stations} />
-            <MapLegend floating />
-            <span className="map-overlay map-count-overlay chip" style={{ color: "var(--brand-dark)" }}>
-              <RadioTower size={14} />
-              {stations.length} station{stations.length > 1 ? "s" : ""} actualisée
-              {stations.length > 1 ? "s" : ""} chaque minute
-            </span>
+          <div className="map-fullbleed">
+            <div className="map-wrap rise-in" style={{ height: "min(80vh, 780px)", minHeight: 420 }}>
+              <StationMap stations={stations} />
+              <MapLegend floating />
+              <span className="map-overlay map-count-overlay chip" style={{ color: "var(--brand-dark)" }}>
+                <RadioTower size={14} />
+                {stations.length} station{stations.length > 1 ? "s" : ""} actualisée
+                {stations.length > 1 ? "s" : ""} chaque minute
+              </span>
+            </div>
           </div>
         )}
       </div>
