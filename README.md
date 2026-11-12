@@ -558,9 +558,8 @@ docker compose --profile tools down    # les arrête (le reste continue de tourn
 
 ## Airflow — orchestration (bonus Phase 7)
 
-Orchestre deux tâches récurrentes (enrichissement, réentraînement) plus
-une tâche manuelle (référentiel stations), comme prévu dans
-l'architecture cible du `CLAUDE.md`. **Pas démarré** par
+Orchestre une tâche récurrente légère (enrichissement quotidien), comme
+prévu dans l'architecture cible du `CLAUDE.md`. **Pas démarré** par
 `docker compose up -d` (profil Docker séparé — Airflow + son metastore
 PostgreSQL dédié sont lourds pour un bonus optionnel) :
 
@@ -580,18 +579,20 @@ docker compose logs airflow-apiserver | grep "Password for user"
 
 | DAG | Planning | Rôle |
 |---|---|---|
-| `enrichissement_quotidien` | tous les jours à 03:00 UTC | Rafraîchit météo (prévisions + historique) et calendriers |
-| `reentrainement_modele` | tous les jours à 03:30 UTC | Relance `ml.retrain` sur tout l'historique disponible — écrit les nouveaux `.joblib` dans `ml/models/`, lus directement par l'API (redémarrer `api` pour les servir) |
-| `maj_referentiel_stations` | déclenchement manuel uniquement | Référentiel des stations + géocodage commune/arrondissement (rarement nécessaire, ~6-8 min) |
+| `enrichissement_quotidien` | tous les jours à 03:00 UTC | Rafraîchit météo (prévisions + historique), calendriers (jours fériés, vacances scolaires) et référentiel stations (nom, capacité, coordonnées) |
 
-Un DAG nouvellement créé est **en pause par défaut** (comportement
-standard Airflow, pas un bug) : bascule l'interrupteur dans l'interface,
-ou en CLI :
+**Volontairement pas en DAG** : le réentraînement du modèle et le
+géocodage des stations sont des opérations ponctuelles/rares, plus
+simples et plus sûres en commande manuelle qu'en planning automatique
+(pas de risque d'écraser silencieusement `model-v1` une nuit sans
+supervision) :
 
 ```bash
-docker compose exec airflow-scheduler airflow dags unpause reentrainement_modele
-docker compose exec airflow-scheduler airflow dags trigger reentrainement_modele   # test immédiat
-docker compose exec airflow-scheduler airflow dags list-runs -d reentrainement_modele
+# Réentraîner le modèle sur tout l'historique disponible
+pip install -r ml/requirements.txt && python -m ml.retrain
+
+# Géocoder les nouvelles stations (commune/arrondissement), ~6-8 min
+pip install -r ingestion/requirements.txt && python -m ingestion.stations_geo
 ```
 
 ### Choix techniques et pièges résolus
@@ -599,30 +600,23 @@ docker compose exec airflow-scheduler airflow dags list-runs -d reentrainement_m
 - **Airflow 3.4 plutôt que 2.x** : Airflow 2.x (même 2.11.2, la dernière
   version 2.x) impose SQLAlchemy 1.4, incompatible avec le
   `pd.read_sql` de pandas 2.2+ (`AttributeError: 'Engine' object has no
-  attribute 'cursor'`). Airflow 3 utilise SQLAlchemy 2.0, qui résout le
+  attribute 'cursor'`) — rencontré quand le réentraînement tournait
+  encore dans Airflow. Airflow 3 utilise SQLAlchemy 2.0, qui résout le
   problème — mais change l'architecture : webserver → `api-server`,
   scheduler qui ne parse plus les DAGs seul → `dag-processor` séparé
   (les deux sont déployés ici), et un nouveau système de jetons JWT entre
   les tâches et l'API (`AIRFLOW__API_AUTH__JWT_SECRET` doit être
   identique sur tous les conteneurs Airflow, sinon `Invalid auth token`).
 - **Image Airflow étendue (`airflow/Dockerfile`)**, pas un conteneur par
-  script : `ingestion.weather`, `ingestion.calendar_days` et `ml.retrain`
-  tournent directement dans l'image Airflow via `BashOperator`.
-  `airflow/requirements.txt` est volontairement **différent** de
-  `ingestion/requirements.txt`/`ml/requirements.txt` : sans SQLAlchemy ni
+  script : `ingestion.weather`, `ingestion.calendar_days` et
+  `ingestion.stations` tournent directement dans l'image Airflow via
+  `BashOperator`. `airflow/requirements.txt` est volontairement minimal
+  (`requests`/`python-dotenv`/`tzdata` seulement) : ni SQLAlchemy ni
   psycopg2-binary (fournis par Airflow + son provider Postgres — les
-  réinstaller casse l'ORM interne d'Airflow), mais avec les **mêmes**
-  versions de numpy/pandas/scikit-learn/joblib/lightgbm que
-  `ml/requirements.txt` = `api/requirements.txt` : ce sont elles qui
-  (dé)sérialisent les `.joblib`, un écart entre l'environnement qui
-  entraîne et celui qui sert le modèle est le genre de bug qui ne se voit
-  qu'au chargement.
-- **`libgomp1`** (runtime OpenMP) ajouté via `apt-get` : LightGBM le
-  charge au premier import, absent de l'image Airflow de base.
-- Testé de bout en bout : les deux DAGs planifiés ont réellement tourné
-  avec succès (requêtes Open-Meteo/calendrier.api.gouv.fr en direct pour
-  le premier ; features sur ~9,4M lignes + entraînement + graphiques SHAP
-  pour le second, ~5min30).
+  réinstaller casse l'ORM interne d'Airflow), et plus de dépendances ML
+  depuis que `ml.retrain` ne tourne plus dans Airflow.
+- Testé de bout en bout : le DAG a réellement tourné avec succès (vraies
+  requêtes Open-Meteo/calendrier.api.gouv.fr/geo.api.gouv.fr).
 
 ## Vérifier que tout fonctionne
 

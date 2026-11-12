@@ -1,25 +1,14 @@
-# Dépendances propres aux scripts que les DAGs appellent (ingestion
-# météo/calendriers, réentraînement ML) — PAS une copie de
-# ingestion/requirements.txt ou ml/requirements.txt : volontairement sans
-# SQLAlchemy ni psycopg2-binary (déjà fournis par l'image de base + son
+# Dépendances du seul DAG restant (enrichissement_quotidien : météo,
+# calendriers, référentiel stations) — PAS une copie de
+# ingestion/requirements.txt : volontairement sans SQLAlchemy ni
+# psycopg2-binary (déjà fournis par l'image de base Airflow + son
 # provider Postgres, avec les versions dont Airflow a besoin en interne),
 # ni confluent-kafka (aucun DAG n'appelle ingestion.producer).
 #
-# numpy/pandas/scikit-learn/joblib/lightgbm, eux, DOIVENT rester
-# identiques à ml/requirements.txt (= api/requirements.txt) : ce sont les
-# versions utilisées pour (dé)sérialiser les .joblib. Un écart ici (testé :
-# pandas 3.x cassait pd.read_sql avec le SQLAlchemy 1.4 d'Airflow ; un
-# scikit-learn différent de celui de l'API risquerait de casser le
-# chargement du modèle réentraîné par ce DAG) aurait un vrai impact,
-# contrairement à SQLAlchemy/psycopg2 ci-dessus qui ne sont jamais
-# sérialisés dans le modèle.
+# Le réentraînement du modèle (ml.retrain) et le géocodage des stations
+# (ingestion.stations_geo) ne tournent plus dans Airflow — ce sont des
+# commandes manuelles ponctuelles (voir README), donc plus besoin ici de
+# numpy/pandas/scikit-learn/lightgbm/shap/matplotlib.
 requests==2.34.2
 python-dotenv==1.2.4
 tzdata==2026.6
-numpy==2.4.6
-pandas==2.2.3
-scikit-learn==1.4.2
-joblib==1.6.0
-lightgbm==4.7.0
-shap==0.51.0
-matplotlib==3.11.2

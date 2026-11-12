@@ -277,13 +277,17 @@ services:
       - velopredict-network
 
   # ---------------------------------------------------------------------
-  # Airflow (bonus Phase 7) — orchestration de l'enrichissement
-  # (météo/calendriers) et du réentraînement nocturne du modèle. PAS
-  # démarré par `docker compose up -d` : nécessite le profil "airflow".
+  # Airflow (bonus Phase 7) — orchestration quotidienne de l'enrichissement
+  # (météo, calendriers, référentiel stations). PAS démarré par
+  # `docker compose up -d` : nécessite le profil "airflow".
   #   docker compose --profile airflow up -d
   #   docker compose --profile airflow down
   # Metastore séparé de TimescaleDB (métier) à dessein : l'orchestrateur
   # ne doit jamais dépendre du schéma applicatif, ni l'inverse.
+  # Le réentraînement du modèle (ml.retrain) et le géocodage des stations
+  # (ingestion.stations_geo) restent des commandes manuelles (voir
+  # README) : opérations rares/ponctuelles, plus sûres hors planning
+  # automatique qu'en DAG.
   # ---------------------------------------------------------------------
   airflow-db:
     image: postgres:16-alpine
@@ -340,7 +344,6 @@ services:
       - ./airflow/dags:/opt/airflow/dags
       - airflow_logs:/opt/airflow/logs
       - ./ingestion:/opt/project/ingestion:ro
-      - ./ml:/opt/project/ml
     depends_on:
       airflow-db:
         condition: service_healthy

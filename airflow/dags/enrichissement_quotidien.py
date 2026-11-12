@@ -10,14 +10,17 @@ donc relançables sans risque même après un échec partiel.
 `ingestion.stations` seulement ici, pas `ingestion.stations_geo` (le
 géocodage commune/arrondissement, ~6-8 min) : trop lent pour un DAG
 quotidien alors que la position change rarement une fois la station
-créée. Le géocodage complet reste dans `maj_referentiel_stations.py`
-(déclenchement manuel) — une nouvelle station apparaît donc sur la carte
-sans commune/arrondissement tant que ce second DAG n'a pas tourné.
+créée. Une nouvelle station apparaît donc sur la carte sans commune/
+arrondissement tant que le géocodage n'a pas tourné.
 
-Planifié à 03:00 UTC, avant le réentraînement nocturne (03:30, voir
-`reentrainement_modele.py`) : dépendance simple par horaire plutôt qu'un
-capteur inter-DAG, suffisant pour deux DAGs qui tournent une fois par
-nuit.
+Seul DAG du projet : le réentraînement du modèle et le géocodage des
+stations sont des opérations ponctuelles/rares, plus simples et plus
+sûres en commande manuelle (`python -m ml.retrain`,
+`python -m ingestion.stations_geo`, voir le README) qu'en DAG planifié —
+pas de risque d'écraser silencieusement le modèle en production une nuit
+sans supervision.
+
+Planifié à 03:00 UTC.
 """
 
 from __future__ import annotations
