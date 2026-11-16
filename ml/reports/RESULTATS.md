@@ -1,16 +1,15 @@
 # Résultats — modèle de prédiction VéloPredict
 
-Phase 5 + 5bis (fiabilisation) + 5ter (classification et tests
-complémentaires). Prédiction du nombre total de vélos disponibles
-(mécaniques + électriques) par station, à t+30 et t+60 minutes.
+Prédiction du nombre total de vélos disponibles (mécaniques + électriques)
+par station, à t+30 et t+60 minutes.
 
-**Versioning** : le modèle décrit et évalué ici est tagué `model-v1`
-(tag git annoté sur le commit qui le produit). Copie figée des fichiers
-`.joblib` dans `ml/models/model-v1/` (hors git, volontairement — voir
-`.gitignore` — c'est un filet de sécurité local contre un ré-entraînement
-accidentel, pas une sauvegarde versionnée). À partir de la Phase 6 (Web
-App), le modèle n'est plus modifié : `GET /stations/{id}/prediction`
-sert `model-v1` sans changement.
+**Versions du modèle** : ce rapport décrit le modèle **réentraîné le
+16 novembre 2026** sur toute la fenêtre disponible (5 octobre → 16 novembre,
+historique importé + collecte en direct). Les chapitres 3, 5, 6, 7, 9 et 10
+ont été recalculés sur ce modèle. Les chapitres 11 et 12 (second jeu de test
+du 2-3 novembre, évaluation sur données live) et le chapitre 13 de contexte
+**n'ont pas été recalculés** : leurs chiffres datent de la première version,
+`model-v1` (tag git ; copie locale dans `ml/models/model-v1/`, hors git).
 
 ## 1. Vérification : cibles calculées par horodatage réel, pas par shift
 
@@ -66,14 +65,15 @@ retirés).
 
 ## 3. Données et découpage temporel — dates précises
 
-- **Fenêtre** : 2026-10-05 → 2026-11-02, limitée aux jours fiables
-  (`v_training_eligible_status`, voir `ingestion/backfill.py`).
-- **3 652 511 lignes** de features (après filtrage des stations
+- **Fenêtre** : 2026-10-05 → 2026-11-16, limitée aux jours fiables
+  (`v_training_eligible_status`, voir `ingestion/backfill.py`) — elle inclut
+  désormais la collecte en direct accumulée depuis le lancement.
+- **3 805 430 lignes** de features (après filtrage des stations
   inactives).
-- **TRAIN** : 2 920 690 lignes, **du 2026-10-05 22:15 UTC au 2026-10-27
-  16:15 UTC**.
-- **TEST** : 731 821 lignes, **du 2026-10-27 16:30 UTC au 2026-11-01
-  22:45 UTC** (~5 jours).
+- **TRAIN** : 3 043 367 lignes, **du 2026-10-05 22:32 UTC au 2026-10-28
+  12:47 UTC**.
+- **TEST** : 762 063 lignes, **du 2026-10-28 13:02 UTC au 2026-11-15
+  22:17 UTC** (~18 jours, jamais vus à l'entraînement).
 - Découpage strictement temporel (jamais aléatoire) : le test est
   entièrement postérieur au train, aucune ligne au même horodatage des
   deux côtés (vérifié, voir `tests/ml/test_train.py`).
@@ -92,30 +92,33 @@ détail par type n'est pas modélisé séparément dans cette version.
 
 | Horizon | Modèle | MAE | RMSE |
 |---|---|---|---|
-| t+30min | persistance | 1.559 | 3.553 |
-| t+30min | moyenne historique | 5.523 | 7.807 |
-| t+30min | régression linéaire | 1.714 | 3.279 |
-| t+30min | LightGBM (niveau) | 1.526 | 3.121 |
-| t+30min | **LightGBM (variation)** | **1.522** | **3.107** |
-| t+60min | persistance | 2.211 | 4.174 |
-| t+60min | moyenne historique | 5.518 | 7.794 |
-| t+60min | régression linéaire | 2.285 | 3.959 |
-| t+60min | LightGBM (niveau) | 2.102 | 3.656 |
-| t+60min | **LightGBM (variation)** | **2.096** | **3.662** |
+| t+30min | persistance | 1.437 | 3.128 |
+| t+30min | moyenne historique | 5.523 | 7.814 |
+| t+30min | régression linéaire | 1.575 | 2.906 |
+| t+30min | LightGBM (niveau) | 1.420 | 2.623 |
+| t+30min | **LightGBM (variation)** | **1.410** | **2.618** |
+| t+60min | persistance | 2.059 | 3.769 |
+| t+60min | moyenne historique | 5.526 | 7.813 |
+| t+60min | régression linéaire | 2.135 | 3.589 |
+| t+60min | LightGBM (niveau) | 2.006 | 3.430 |
+| t+60min | **LightGBM (variation)** | **2.003** | **3.440** |
 
 *(fichier complet : `ml/reports/metriques.csv`)*
 
-**LightGBM (niveau) bat la persistance sur les deux métriques et les deux
-horizons**, confirmant les résultats de la Phase 5 initiale même après
-correction des cibles et exclusion des stations inactives.
+**LightGBM (niveau) bat la persistance sur les deux horizons** : MAE
+-1,2 % à t+30 (1.420 vs 1.437) et -2,6 % à t+60 (2.006 vs 2.059) ; RMSE
+-16,1 % à t+30 (2.623 vs 3.128) et -9,0 % à t+60. L'écart en MAE est faible
+parce que, sur ~40 % des lignes, la disponibilité ne bouge pas du tout (la
+persistance y est parfaite) ; le chapitre 7 isole les lignes qui changent
+réellement. Le RMSE, qui pénalise les grosses erreurs, montre que le modèle
+évite surtout les gros écarts.
 
 ## 6. LightGBM niveau vs LightGBM variation (delta)
 
 Variante entraînée à prédire `y(t+h) - bikes_t` plutôt que le niveau
 absolu, puis reconstruite en niveau (`bikes_t + delta_prédit`) pour rester
 comparable (`ml/train.py::DeltaLightGBM`). Résultat : **légèrement
-meilleure** que la version niveau sur les deux horizons (MAE 1.522 vs
-1.526 à t+30 ; 2.096 vs 2.102 à t+60) — un gain marginal (~0.3%), pas
+meilleure** que la version niveau sur les deux horizons (MAE 1.410 vs 1.420 à t+30 ; 2.003 vs 2.006 à t+60) — un gain marginal (≤ 0,7 %), pas
 une rupture. Logique : les deux versions ont accès à `bikes_t` comme
 feature, donc apprennent en pratique une fonction très proche ; forcer
 explicitement la cible à être une variation aide un peu à régulariser
@@ -129,29 +132,32 @@ complexité supplémentaire côté inférence).
 
 La MAE globale est flattée par les lignes où rien ne bouge (persistance y
 est mécaniquement parfaite). En ne gardant que les lignes où
-`bikes_t_plus_h != bikes_t` (**59.8%** des lignes de test à t+30,
-**72.1%** à t+60 — l'écart entre les deux montre que plus l'horizon est
+`bikes_t_plus_h != bikes_t` (**60,2 %** des lignes de test à t+30,
+**72,3 %** à t+60 — l'écart entre les deux montre que plus l'horizon est
 long, plus un changement a eu le temps de se produire) :
 
 | Horizon | Modèle | MAE (lignes qui changent) | RMSE |
 |---|---|---|---|
-| t+30min | persistance | 2.607 | 4.594 |
-| t+30min | LightGBM (niveau) | 2.315 | 4.007 |
-| t+30min | LightGBM (variation) | 2.301 | 3.991 |
-| t+30min | régression linéaire | 2.516 | 4.149 |
-| t+60min | persistance | 3.065 | 4.914 |
-| t+60min | LightGBM (niveau) | 2.673 | 4.268 |
-| t+60min | LightGBM (variation) | 2.664 | 4.274 |
-| t+60min | régression linéaire | 2.953 | 4.632 |
+| t+30min | persistance | 2.386 | 4.030 |
+| t+30min | LightGBM (niveau) | 2.105 | 3.342 |
+| t+30min | LightGBM (variation) | 2.096 | 3.336 |
+| t+30min | régression linéaire | 2.310 | 3.679 |
+| t+60min | persistance | 2.846 | 4.432 |
+| t+60min | LightGBM (niveau) | 2.546 | 4.001 |
+| t+60min | LightGBM (variation) | 2.540 | 4.013 |
+| t+60min | régression linéaire | 2.746 | 4.192 |
 
 *(fichier complet : `ml/reports/metriques_stations_qui_changent.csv`)*
 
 Sur ce sous-ensemble, **l'avantage de LightGBM sur la persistance est
-beaucoup plus net** : -11.2% de MAE à t+30 (2.315 vs 2.607), -12.8% à
-t+60 (2.673 vs 3.065) — contre -2% et -4.9% sur l'ensemble du test. C'est
-la comparaison la plus honnête de la capacité du modèle à capter une
+beaucoup plus net** : -11,8 % de MAE à t+30 (2.105 vs 2.386), -10,5 % à
+t+60 (2.546 vs 2.846) — contre -1,2 % et -2,6 % sur l'ensemble du test.
+C'est la comparaison la plus honnête de la capacité du modèle à capter une
 vraie dynamique plutôt qu'à bénéficier des lignes où ne rien prédire de
 nouveau suffit.
+
+**Arrondi à l'entier** (l'appli affiche un nombre entier de vélos) : sans
+effet négatif, la MAE à t+30 passe de 1.420 à 1.384 pour LightGBM (niveau).
 
 ## 8. Erreur par heure de la journée
 
@@ -165,6 +171,20 @@ disponibilité change le plus vite, donc les plus durs à prédire quel que
 soit le modèle.
 
 ## 9. Classification « station vide dans 30 min » (seuil réglé sur validation)
+
+> **Mise à jour du 16 novembre 2026** (modèle réentraîné, test 28 oct → 15 nov,
+> 762 063 lignes). Seuils réglés sur validation : classifieur `proba >= 0.92`
+> (F1 val 0.589), régression seuillée `niveau <= 1.25` (F1 val 0.559).
+>
+> | Modèle | Précision | Rappel | F1 |
+> |---|---|---|---|
+> | classifieur LightGBM | 0.612 | 0.462 | **0.527** |
+> | régression seuillée | 0.511 | 0.510 | 0.510 |
+> | persistance | 0.503 | 0.506 | 0.504 |
+>
+> Le classifieur dépasse la persistance de +4,4 % de F1 (précision nettement
+> meilleure, rappel un peu plus bas). Le détail de méthode ci-dessous reste
+> valable ; ses chiffres d'origine datent de `model-v1`.
 
 **Ce que la Phase 5bis avait montré** (seuil naïf à 0.5, sans entraînement
 dédié) : la persistance battait tous les modèles de régression sur le F1.
@@ -222,6 +242,20 @@ phase ultérieure si le cas d'usage "alerte" devient prioritaire.
 
 ## 10. Événement « devient vide » (bikes_t > 0 et cible == 0)
 
+> **Mise à jour du 16 novembre 2026** (19 095 événements « devient vide »
+> sur 723 116 lignes à `bikes_t > 0`) :
+>
+> | Modèle | Précision | Rappel | F1 |
+> |---|---|---|---|
+> | régression seuillée | 0.209 | 0.116 | **0.149** |
+> | classifieur LightGBM | 0.314 | 0.003 | 0.007 |
+> | persistance | 0 | 0 | 0 |
+>
+> Prévoir *l'instant où une station se vide* reste très difficile : la
+> régression seuillée en détecte ~12 % (avec ~21 % de précision) et le
+> classifieur, trop conservateur, presque aucun. À présenter comme un
+> signal indicatif, pas comme une alerte fiable.
+
 Restreint aux lignes où la station a encore des vélos au moment de la
 prédiction (692 969 lignes sur 731 821 ; 20 670 d'entre elles
 "deviennent vides" à t+30, soit 3.0%) :
@@ -251,6 +285,8 @@ confirmer sur une fenêtre de test plus longue avant d'en tirer une
 conclusion ferme.
 
 ## 11. Second jeu de test : 2026-11-02 / 2026-11-03
+
+> *Chiffres mesurés sur `model-v1` ; non recalculés pour le modèle du 16 novembre.*
 
 ### Pourquoi ces deux jours sont exclus du jeu principal
 
@@ -300,6 +336,8 @@ régularité de la collecte au moment de l'inférence, pas seulement à
 l'entraînement.
 
 ## 12. Évaluation sur données live (test réellement indépendant)
+
+> *Chiffres mesurés sur `model-v1` ; non recalculés pour le modèle du 16 novembre.*
 
 `ml/evaluate_live.py` ré-évalue les modèles sauvegardés sur notre propre
 collecte en direct (`source = 'live'`, depuis le 2026-11-09 16:21 UTC) —
