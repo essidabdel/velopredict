@@ -20,7 +20,7 @@ def _env(name: str, default: str) -> str:
 
 
 DATABASE_URL = os.environ.get(
-    "DATABASE_URL", "postgresql://velopredict:change-me@localhost:5433/velopredict"
+    "DATABASE_URL", "postgresql://velopredict:admin@localhost:5433/velopredict"
 )
 LOG_LEVEL = _env("LOG_LEVEL", "INFO")
 

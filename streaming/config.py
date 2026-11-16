@@ -23,7 +23,7 @@ LOG_LEVEL = _env("LOG_LEVEL", "INFO")
 
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
-    "postgresql://velopredict:change-me@localhost:5432/velopredict",
+    "postgresql://velopredict:admin@localhost:5432/velopredict",
 )
 REDIS_URL = _env("REDIS_URL", "redis://:change-me@localhost:6379/0")
 

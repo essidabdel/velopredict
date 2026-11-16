@@ -70,7 +70,7 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-velopredict}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
       POSTGRES_DB: ${POSTGRES_DB:-velopredict}
     volumes:
       - timescale_data:/var/lib/postgresql/data
@@ -141,7 +141,7 @@ services:
     env_file: .env
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      DATABASE_URL: postgresql://${POSTGRES_USER:-velopredict}:${POSTGRES_PASSWORD:-change-me}@timescaledb:5432/${POSTGRES_DB:-velopredict}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-velopredict}:${POSTGRES_PASSWORD:-admin}@timescaledb:5432/${POSTGRES_DB:-velopredict}
     depends_on:
       kafka:
         condition: service_healthy
@@ -186,7 +186,7 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-velopredict}:${POSTGRES_PASSWORD:-change-me}@timescaledb:5432/${POSTGRES_DB:-velopredict}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-velopredict}:${POSTGRES_PASSWORD:-admin}@timescaledb:5432/${POSTGRES_DB:-velopredict}
       REDIS_URL: redis://:${REDIS_PASSWORD:-change-me}@redis:6379/0
     ports:
       - "${API_PORT:-8000}:8000"
@@ -327,6 +327,9 @@ services:
       # passe généré au premier démarrage et affiché dans les logs de
       # l'api-server (voir la commande de vérification dans le README).
       AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: "${AIRFLOW_ADMIN_USER:-admin}:Admin"
+      # Mot de passe FIXE (démo locale) : lu dans ce fichier au lieu d'être généré
+      # aléatoirement à chaque nouveau volume. Identifiants : admin / admin.
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE: /opt/airflow/simple_auth_passwords.json
       # Airflow 3 : les tâches (exécutées par le scheduler/LocalExecutor)
       # parlent à l'"Execution API" plutôt qu'à la base directement.
       # Défaut = localhost:8080, faux dans un conteneur séparé de
@@ -338,10 +341,11 @@ services:
       # par le scheduler) se fait rejeter par l'api-server ("Invalid auth
       # token") faute de partager la même clé.
       AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_SECRET_KEY:-change-me-too}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-velopredict}:${POSTGRES_PASSWORD:-change-me}@timescaledb:5432/${POSTGRES_DB:-velopredict}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-velopredict}:${POSTGRES_PASSWORD:-admin}@timescaledb:5432/${POSTGRES_DB:-velopredict}
     command: ["db", "migrate"]
     volumes: &airflow-volumes
       - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/simple_auth_passwords.json:/opt/airflow/simple_auth_passwords.json
       - airflow_logs:/opt/airflow/logs
       - ./ingestion:/opt/project/ingestion:ro
     depends_on:
