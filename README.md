@@ -22,7 +22,6 @@ Projet réalisé dans le cadre du module **Open Data** (IPSSI) — Sujet 4
 - [Outils d'inspection (démo / présentation)](#outils-dinspection-démo--présentation)
 - [Airflow — orchestration (bonus Phase 7)](#airflow--orchestration-bonus-phase-7)
 - [Vérifier que tout fonctionne](#vérifier-que-tout-fonctionne)
-- [Captures d'écran](#captures-décran)
 - [État d'avancement](#état-davancement)
 
 ## Objectif
@@ -36,8 +35,10 @@ Le projet couvre les exigences du sujet :
 5. Modèle de prédiction (disponibilité à t+30 / t+60 min)
 6. Filtres dans l'application (station, zone, horizon de prédiction...)
 
-En bonus, une architecture Big Data est mise en place : **Kafka**,
-**PySpark Structured Streaming** et **Apache Airflow**.
+En bonus, une architecture de streaming est mise en place : **Kafka**
+(découplage collecte / stockage) et **Apache Airflow** (enrichissement
+quotidien). PySpark Structured Streaming figurait dans l'architecture
+cible mais n'a **pas** été implémenté.
 
 ## Architecture
 
@@ -49,13 +50,14 @@ API Vélib' + Open-Meteo + calendriers
         │
         ├──► consumer d'archivage ──► TimescaleDB (hypertable des relevés)
         ├──► consumer temps réel  ──► Redis (dernier état de chaque station)
-        └──► PySpark Structured Streaming (agrégats par arrondissement, alertes station vide/pleine)
+        └──► PySpark Structured Streaming (piste prévue, non implémentée)
                                   │
                          API FastAPI (REST)
                                   │
                  Web App React + Vite + Leaflet  /  Power BI
 
-Apache Airflow : ingestion météo, calendriers, réentraînement nocturne du modèle
+Apache Airflow : enrichissement quotidien (météo, calendriers, référentiel stations)
+Réentraînement du modèle : commande manuelle `python -m ml.retrain`
 ```
 
 Tout le stack se lance avec `docker compose`.
@@ -71,7 +73,7 @@ Tout le stack se lance avec `docker compose`.
 | Machine Learning | pandas, scikit-learn, LightGBM / XGBoost, SHAP, matplotlib, joblib |
 | Frontend         | React, Vite, react-leaflet (CircleMarker en rendu canvas) |
 | Orchestration    | Apache Airflow |
-| Traitement       | PySpark Structured Streaming |
+| Traitement       | Kafka + consumers Python (PySpark Structured Streaming : non implémenté) |
 
 ## Sources de données (open data)
 
@@ -110,19 +112,18 @@ propre collecte), et leur fiabilité par jour est documentée dans
 
 ```
 velopredict/
-├── CLAUDE.md         # contexte et règles du projet
 ├── README.md
 ├── docker-compose.yml
 ├── .env.example
 ├── ingestion/        # producer API → Kafka, chargement météo et calendriers
-├── streaming/        # consumers Kafka → TimescaleDB / Redis, job PySpark
+├── streaming/        # consumers Kafka → TimescaleDB / Redis
 ├── database/         # schéma SQL, migrations, vues
 ├── airflow/dags/
 ├── api/              # FastAPI
 ├── ml/               # features, entraînement, évaluation, modèle sauvegardé
 ├── analysis/         # notebooks d'analyse, exports pour Power BI
 ├── frontend/         # React + Vite + react-leaflet
-├── docs/             # schéma d'architecture, captures, MCD
+├── docs/             # présentation orale (pptx)
 └── tests/
 ```
 
@@ -159,7 +160,7 @@ premier démarrage de TimescaleDB (volume vide). L'API est accessible sur
 
 Pour charger/rafraîchir le référentiel des stations et les données
 d'enrichissement (changent rarement ou périodiquement — pas besoin de les
-faire tourner en continu ; seront orchestrés par Airflow en Phase 7) :
+faire tourner en continu ; orchestrés par Airflow, voir plus bas) :
 
 ```bash
 # Depuis un venv Python 3.11+ avec ingestion/requirements.txt installé
@@ -193,7 +194,7 @@ pip install -r ml/requirements.txt && python -m ml.retrain  # entraîne le modè
   capacité) dans la table `stations` via un upsert. Script ponctuel, pas
   un service continu.
 - **Lancement** : `python -m ingestion.stations` (nécessite `DATABASE_URL`
-  pointant vers TimescaleDB, ex. `postgresql://velopredict:change-me@localhost:5433/velopredict`).
+  pointant vers TimescaleDB, ex. `postgresql://velopredict:admin@localhost:5433/velopredict`).
 - **Vérification** : `SELECT count(*) FROM stations;` doit renvoyer 1522.
 
 ### `database/` — schéma TimescaleDB
@@ -309,7 +310,7 @@ pip install -r ml/requirements.txt && python -m ml.retrain  # entraîne le modè
   référentiel Postgres (nom, capacité, commune) et l'état temps réel Redis.
   - `GET /stations` — liste filtrable par `arrondissement` (recherche
     partielle sur la commune/l'arrondissement), `velo`
-    (`mecanique`/`electrique`), `etat` (`vide`/`pleine`/`disponible`) et
+    (`mecanique`/`electrique`), `etat` (`vide`/`faible`/`disponible`/`pleine`) et
     `recherche` (nom de station).
   - `GET /stations/{id}` — détail d'une station (état actuel + capacité),
     404 si inconnue.
@@ -338,8 +339,9 @@ pip install -r ml/requirements.txt && python -m ml.retrain  # entraîne le modè
 
 - **Rôle** : prédit le nombre total de vélos disponibles par station à
   t+30 et t+60 minutes. Pipeline complet : `ml/features.py` (construction
-  des features, grille 15 min + tolérance 30 min, variables listées dans
-  CLAUDE.md), `ml/baselines.py` (persistance + moyenne historique),
+  des features, grille 15 min + tolérance 30 min ; variables : heure, jour de
+  la semaine, week-end, jour férié, vacances scolaires, météo, disponibilité
+  récente t / t-15 / t-30 / t-60, capacité, coordonnées), `ml/baselines.py` (persistance + moyenne historique),
   `ml/train.py` (découpage temporel strict, régression linéaire +
   LightGBM), `ml/classify.py` (classifieur "station vide" avec seuil
   réglé sur validation), `ml/evaluate.py` (MAE/RMSE, graphiques),
@@ -361,10 +363,13 @@ pip install -r ml/requirements.txt && python -m ml.retrain  # entraîne le modè
   vraiment, classifieur "station vide" dédié avec seuil réglé sur
   validation (précision/rappel/F1, + l'événement "devient vide"), un
   second jeu de test (2-3 novembre) et un test sur données live, limites.
-  LightGBM bat la persistance sur les deux horizons (jusqu'à -13% de MAE
-  sur les lignes où la disponibilité change réellement, et +6% de F1 sur
-  la classification "vide dans 30min" une fois le seuil correctement
-  réglé — un seuil naïf à 0.5 inversait ce résultat, voir le rapport §9).
+  Modèle **réentraîné le 16 novembre 2026** (3,8 M de lignes, test chronologique
+  du 28 octobre au 15 novembre) : LightGBM bat la persistance à 30 et 60 min
+  (MAE 1,42 vs 1,44 et 2,01 vs 2,06 ; RMSE -16 % à 30 min), avec un avantage
+  net sur les lignes où la disponibilité change réellement (≈ -11 % de MAE).
+  Le classifieur « station vide dans 30 min » atteint un F1 de 0,53 contre
+  0,50 pour la persistance ; prévoir l'instant exact où une station se vide
+  reste difficile (voir le rapport §9-10).
 - **Tests** : `pytest tests/ml` — logique pure (découpage temporel,
   baselines, gestion du changement d'heure, jointure par horodatage réel,
   filtrage des stations inactives, réglage de seuil) testée sans DB ni
@@ -380,37 +385,41 @@ pip install -r ml/requirements.txt && python -m ml.retrain  # entraîne le modè
 
 - **Rôle** : consulte l'API FastAPI depuis le navigateur, sans aucun appel
   serveur intermédiaire (le build nginx sert uniquement des fichiers
-  statiques). 5 pages :
-  - **Carte** (`/`) — les ~1522 stations en `CircleMarker` (rendu canvas,
-    `preferCanvas`), couleur **et** libellé par état (vide, disponibilité
-    faible ≤20% de la capacité, disponible, pleine, inconnue), légende
-    visible, actualisation automatique toutes les 60s.
+  statiques). 4 pages, chacune affichant « Mis à jour il y a X s » :
+  - **Carte** (`/`) — les ~1 522 stations regroupées en clusters aux faibles
+    zooms (regroupement par grille écrit maison, sans dépendance
+    supplémentaire) puis en marqueurs individuels dès le zoom 14 (rendu
+    canvas). La légende sert de **filtre cliquable avec compteurs** (Vide,
+    Presque vide, Disponible, Pleine). Au survol d'une station : nom, état,
+    vélos mécaniques / électriques, bornes libres, **prévision à 30 min** et
+    lien vers la fiche. Bouton « Me localiser ». Actualisation toutes les 60 s.
   - **Recherche + filtres** — recherche par nom de station, et filtres
     commune/arrondissement, type de vélo, état, combinables entre eux et
     reflétés dans l'URL (`?arrondissement=16e&velo=mecanique&etat=disponible`)
-    via `useSearchParams` — un lien copié/partagé reproduit exactement la
-    même vue.
-  - **Fiche station** (`/stations/:id`) — état actuel, courbe des 24
-    dernières heures (recharts), prédictions à t+30/t+60min (nombre de
-    vélos) et le risque de pénurie à 30min affiché **uniquement** comme un
-    niveau discret (faible/moyen/élevé), jamais une probabilité brute (voir
-    `ml/predict.py::classify_risk_level`).
-  - **Tableau de bord** (`/dashboard`) — indicateurs globaux (vélos
-    disponibles, stations vides/pleines) + 3 graphiques (répartition par
-    état, mécanique vs électrique, communes avec le plus de stations
-    vides).
-  - **À propos** (`/about`) — sources open data, attribution ODbL, méthode
-    et limites du modèle.
-  - États de chargement (squelettes à la forme du contenu final, pas un
-    simple spinner générique) et d'erreur gérés sur chaque page (message
-    clair + bouton « Réessayer » si l'API est injoignable, voir
-    [captures d'écran](#captures-décran)) ; état vide dédié quand des
-    filtres ne renvoient aucune station.
-  - Design responsive avec nav mobile dédiée (menu plein écran sous
-    760px, pas un simple retour à la ligne) ; mode sombre (suit la
-    préférence système, bascule mémorisée en `localStorage`) ;
-    accessibilité clavier (lien d'évitement, focus visible partout,
-    animations réduites si `prefers-reduced-motion`).
+    — un lien copié/partagé reproduit exactement la même vue.
+  - **Fiche station** (`/stations/:id`) — état en langage courant, jauge de
+    remplissage (« 24 / 51 vélos »), courbe des 24 dernières heures
+    (axe temporel, trous de collecte reliés par un pointillé gris, prévisions
+    +30 min et +1 h en pointillés), prévisions **arrondies à l'entier** avec
+    la variation par rapport à maintenant, et le risque de pénurie à 30 min
+    affiché **uniquement** comme un niveau discret (faible / moyen / élevé),
+    jamais une probabilité brute (voir `ml/predict.py`).
+  - **Tableau de bord** (`/dashboard`) — KPI avec pourcentages, répartition
+    des stations par état, donut mécaniques / électriques, communes avec le
+    plus de stations vides, et **« Stations à surveiller »** (les 5 au risque
+    de pénurie le plus élevé à 30 min, cliquables).
+  - **À propos** (`/about`) — projet, sources open data (attribution ODbL),
+    modèle et limites.
+  - États de chargement (squelettes à la forme du contenu final) et d'erreur
+    (message clair + bouton « Réessayer » si l'API est injoignable) ; état vide
+    dédié quand des filtres ne renvoient aucune station.
+  - Libellés d'état harmonisés partout : « Vide », « Presque vide » (≤ 20 % de
+    la capacité), « Disponible », « Pleine » ; nombres au format français.
+  - Design responsive (menu mobile dédié sous 760 px) ; mode sombre (suit la
+    préférence système, bascule mémorisée en `localStorage`) ; accessibilité
+    clavier (lien d'évitement, focus visible, animations réduites si
+    `prefers-reduced-motion`). Fond de carte OpenStreetMap (sans clé API),
+    désaturé en clair et inversé en sombre par filtre CSS.
 - **Lancement** :
   ```bash
   docker compose up -d --build frontend   # http://localhost:3000 (nginx)
@@ -424,14 +433,13 @@ pip install -r ml/requirements.txt && python -m ml.retrain  # entraîne le modè
   `VITE_API_BASE_URL` dans `.env.example`.
 - **Vérification** :
   ```bash
-  curl -s -o /dev/null -w "%{http_code}
-" http://localhost:3000/            # 200
-  curl -s -o /dev/null -w "%{http_code}
-" http://localhost:3000/dashboard   # 200 (fallback SPA nginx)
+  curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/            # 200
+  curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/dashboard   # 200 (fallback SPA nginx)
   cd frontend && npm run lint && npx tsc -b   # oxlint + vérification des types
   ```
-- **Versioning du modèle** : le modèle servi par l'API est figé au tag git
-  `model-v1` depuis le début de cette phase — voir la note en tête de
+- **Versioning du modèle** : l'API sert les fichiers de `ml/models/`
+  (réentraînés le 16 novembre 2026). La première version reste identifiée par
+  le tag git `model-v1` — voir la note en tête de
   [`ml/reports/RESULTATS.md`](ml/reports/RESULTATS.md).
 
 ### `analysis/` — notebooks et exports Power BI
@@ -546,7 +554,7 @@ docker compose --profile tools down    # les arrête (le reste continue de tourn
 | Interface | URL | Ce que ça montre |
 |---|---|---|
 | **Kafka UI** | http://localhost:8081 | Le topic `velib.station_status`, son nombre de messages/sa taille, et le contenu JSON brut de chaque message (onglet *Messages*) |
-| **Adminer** | http://localhost:8082 | Les tables/vues PostgreSQL/TimescaleDB — se connecter avec Système **PostgreSQL**, Serveur `timescaledb`, Utilisateur/Base `velopredict`, mot de passe = `POSTGRES_PASSWORD` du `.env` |
+| **Adminer** | http://localhost:8082 | Les tables/vues PostgreSQL/TimescaleDB — se connecter avec Système **PostgreSQL**, Serveur `timescaledb`, Utilisateur `velopredict`, Mot de passe `admin` (valeur de `POSTGRES_PASSWORD`), Base `velopredict` |
 | **Redis Commander** | http://localhost:8083 | Les clés `station:<id>` (dernier état connu) — console `redis>` en bas de page pour taper `get station:6245` par exemple |
 
 > ⚠️ Démarrer ce profil recrée `producer`/`archiver`/`live`/`api` si le
@@ -558,8 +566,7 @@ docker compose --profile tools down    # les arrête (le reste continue de tourn
 
 ## Airflow — orchestration (bonus Phase 7)
 
-Orchestre une tâche récurrente légère (enrichissement quotidien), comme
-prévu dans l'architecture cible du `CLAUDE.md`. **Pas démarré** par
+Orchestre une tâche récurrente légère (enrichissement quotidien). **Pas démarré** par
 `docker compose up -d` (profil Docker séparé — Airflow + son metastore
 PostgreSQL dédié sont lourds pour un bonus optionnel) :
 
@@ -568,14 +575,10 @@ docker compose --profile airflow up -d     # démarre Airflow (~1-2 min au premi
 docker compose --profile airflow down      # l'arrête (le reste continue de tourner)
 ```
 
-Interface : **http://localhost:8080**. Identifiant `admin`, mot de passe
-généré au premier démarrage et affiché une seule fois dans les logs :
-
-```bash
-docker compose logs airflow-apiserver | grep "Password for user"
-```
-
-(Si tu as perdu ce mot de passe après un `docker compose --profile airflow down -v` qui supprime le volume `airflow_db_data`, un nouveau sera régénéré et réaffiché au prochain démarrage.)
+Interface : **http://localhost:8080** — identifiants **`admin` / `admin`**
+(mot de passe fixe, défini dans `airflow/simple_auth_passwords.json` et monté
+dans les conteneurs Airflow ; à changer si le projet sort d'un usage de
+démonstration locale).
 
 | DAG | Planning | Rôle |
 |---|---|---|
@@ -584,7 +587,7 @@ docker compose logs airflow-apiserver | grep "Password for user"
 **Volontairement pas en DAG** : le réentraînement du modèle et le
 géocodage des stations sont des opérations ponctuelles/rares, plus
 simples et plus sûres en commande manuelle qu'en planning automatique
-(pas de risque d'écraser silencieusement `model-v1` une nuit sans
+(pas de risque d'écraser silencieusement le modèle servi une nuit sans
 supervision) :
 
 ```bash
@@ -685,34 +688,6 @@ compression native TimescaleDB (`ALTER TABLE ... SET (timescaledb.compress)`)
 pourra être activée plus tard sur les anciens chunks si besoin, sans
 impact sur l'ingestion.
 
-## Captures d'écran
-
-Prises sur le build Docker (nginx, `http://localhost:3000`) le 2026-11-12,
-avec des données réelles collectées en continu depuis la Phase 1. Design
-revu en deux passes : identité visuelle (Phase 6 bis — typographie Inter/
-Lexend, palette violette de marque distincte des couleurs d'état/données,
-cartes avec ombres et coins arrondis, icônes lucide-react) puis finitions
-UX (Phase 6 ter — mode sombre, menu mobile, squelettes de chargement,
-états vides, accessibilité). Les couleurs qui encodent une donnée (état
-de station, séries des graphiques) n'ont jamais changé, validées en
-Phase 6.
-
-| | |
-|---|---|
-| **Carte** — ~1522 stations, couleur + légende par état | **Carte filtrée** — `arrondissement=16e&velo=mecanique&etat=disponible`, combiné dans l'URL |
-| ![Carte des stations](docs/screenshots/01-carte.jpg) | ![Carte avec filtres combinés](docs/screenshots/02-carte-filtres.jpg) |
-| **Fiche station** — 24h + prédiction honnête quand l'historique récent manque | **Tableau de bord** — indicateurs globaux + 3 graphiques |
-| ![Fiche station](docs/screenshots/03-fiche-station.jpg) | ![Tableau de bord](docs/screenshots/04-tableau-de-bord.jpg) |
-| **À propos** — sources open data et attribution ODbL | **État d'erreur** — API arrêtée volontairement pour vérifier le message + bouton « Réessayer » |
-| ![À propos](docs/screenshots/05-a-propos.jpg) | ![Erreur API injoignable](docs/screenshots/06-erreur-api.jpg) |
-| **Mode sombre** — bascule mémorisée (localStorage), suit aussi la préférence système par défaut | |
-| ![Tableau de bord en mode sombre](docs/screenshots/07-mode-sombre.jpg) | |
-
-La fiche station ci-dessus illustre aussi le cas honnête d'une
-prédiction indisponible (historique récent encore trop court pour cette
-station) : l'API refuse de deviner plutôt que d'afficher un chiffre
-inventé, message explicite à l'appui.
-
 ## État d'avancement
 
 - [x] Phase 0 — Initialisation du dépôt (arborescence, Docker Compose,
@@ -733,11 +708,8 @@ inventé, message explicite à l'appui.
       recherche + filtres combinables reflétés dans l'URL, fiche station
       (historique, prédictions, risque en niveau discret), tableau de
       bord, page À propos avec attribution ODbL, états de chargement/
-      erreur, frontend ajouté au `docker-compose.yml` — voir
-      [Captures d'écran](#captures-décran)
-- [x] Phase 7 (partiel) — Bonus Big Data : orchestration Airflow faite
-      (enrichissement quotidien + réentraînement nocturne du modèle, voir
+      erreur, frontend ajouté au `docker-compose.yml`
+- [x] Phase 7 (partiel) — Bonus : orchestration Airflow faite (un DAG
+      d'enrichissement quotidien, voir
       [Airflow — orchestration](#airflow--orchestration-bonus-phase-7)) ;
-      PySpark Structured Streaming pas encore fait
-
-Chaque phase est validée avant de passer à la suivante (voir `CLAUDE.md`).
+      PySpark Structured Streaming **non réalisé**
