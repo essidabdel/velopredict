@@ -25,7 +25,7 @@ export function RiskBadge({ niveau }: { niveau: NiveauRisque }) {
       }}
     >
       <Icon size={16} />
-      Risque de pénurie (30 min) : {NIVEAU_RISQUE_LABELS[niveau]}
+      Risque de pénurie : {NIVEAU_RISQUE_LABELS[niveau].toLowerCase()}
     </span>
   );
 }

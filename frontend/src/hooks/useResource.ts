@@ -13,6 +13,8 @@ export interface ResourceState<T> {
   data: T | null;
   loading: boolean;
   error: string | null;
+  /** Horodatage (ms) du dernier chargement réussi, pour « mis à jour il y a X s ». */
+  updatedAt: number | null;
   reload: () => void;
 }
 
@@ -24,6 +26,7 @@ export function useResource<T>(
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [updatedAt, setUpdatedAt] = useState<number | null>(null);
   const fetcherRef = useRef(fetcher);
   fetcherRef.current = fetcher;
 
@@ -33,6 +36,7 @@ export function useResource<T>(
       const result = await fetcherRef.current();
       setData(result);
       setError(null);
+      setUpdatedAt(Date.now());
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Erreur inattendue.");
     } finally {
@@ -51,5 +55,5 @@ export function useResource<T>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [load, options.pollMs]);
 
-  return { data, loading, error, reload: () => void load(false) };
+  return { data, loading, error, updatedAt, reload: () => void load(false) };
 }

@@ -1,6 +1,10 @@
 import { MapIcon, RadioTower, SearchX } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { fetchStations } from "../api/client";
+import type { EtatStation } from "../api/types";
+import { UpdatedAgo } from "../components/UpdatedAgo";
+import { ETAT_ORDER } from "../constants/etat";
+import { formatNumber } from "../lib/format";
 import { ErrorState } from "../components/ErrorState";
 import { FilterBar } from "../components/FilterBar";
 import { LoadingState } from "../components/LoadingState";
@@ -19,17 +23,37 @@ export function MapPage() {
     data: stations,
     loading,
     error,
+    updatedAt,
     reload,
   } = useResource(`stations:${JSON.stringify(filters)}`, fetcher, { pollMs: POLL_MS });
 
+  const [hidden, setHidden] = useState<Set<EtatStation>>(new Set());
+  const toggle = (etat: EtatStation) =>
+    setHidden((prev) => {
+      const next = new Set(prev);
+      if (next.has(etat)) next.delete(etat);
+      else next.add(etat);
+      return next;
+    });
+
+  const counts = useMemo(() => {
+    const c = Object.fromEntries(ETAT_ORDER.map((e) => [e, 0])) as Record<EtatStation, number>;
+    for (const s of stations ?? []) c[s.etat] += 1;
+    return c;
+  }, [stations]);
+  const shown = useMemo(() => (stations ?? []).filter((s) => !hidden.has(s.etat)), [stations, hidden]);
+
   return (
     <div>
-      <h1 className="page-title">
-        <span className="page-title-icon">
-          <MapIcon size={22} />
-        </span>
-        Carte des stations
-      </h1>
+      <div className="page-header">
+        <h1 className="page-title">
+          <span className="page-title-icon">
+            <MapIcon size={22} />
+          </span>
+          Carte des stations
+        </h1>
+        <UpdatedAgo at={updatedAt} />
+      </div>
       <p className="page-lede">
         La disponibilité des vélos Vélib', station par station, autour de Paris.
       </p>
@@ -58,12 +82,12 @@ export function MapPage() {
         {!error && stations && stations.length > 0 && (
           <div className="map-fullbleed">
             <div className="map-wrap rise-in" style={{ height: "min(80vh, 780px)", minHeight: 420 }}>
-              <StationMap stations={stations} />
-              <MapLegend floating />
-              <span className="map-overlay map-count-overlay chip" style={{ color: "var(--brand-dark)" }}>
+              <StationMap stations={shown} />
+              <MapLegend counts={counts} hidden={hidden} onToggle={toggle} floating />
+              <span className="map-overlay map-count-overlay chip" style={{ color: "var(--text-secondary)" }}>
                 <RadioTower size={14} />
-                {stations.length} station{stations.length > 1 ? "s" : ""} actualisée
-                {stations.length > 1 ? "s" : ""} chaque minute
+                {formatNumber(shown.length)} station{shown.length > 1 ? "s" : ""} affichée
+                {shown.length > 1 ? "s" : ""} · actualisées chaque minute
               </span>
             </div>
           </div>

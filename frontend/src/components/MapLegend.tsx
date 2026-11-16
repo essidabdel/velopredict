@@ -1,23 +1,47 @@
+import type { EtatStation } from "../api/types";
 import { ETAT_COLORS, ETAT_LABELS, ETAT_ORDER } from "../constants/etat";
+import { formatNumber } from "../lib/format";
 
-export function MapLegend({ floating = false }: { floating?: boolean }) {
+// Légende = filtres : un clic masque / affiche les stations de cet état sur
+// la carte (le compteur reste celui de la sélection courante).
+export function MapLegend({
+  counts,
+  hidden,
+  onToggle,
+  floating = false,
+}: {
+  counts: Record<EtatStation, number>;
+  hidden: Set<EtatStation>;
+  onToggle: (etat: EtatStation) => void;
+  floating?: boolean;
+}) {
   return (
     <div
-      aria-label="Légende de la carte"
+      role="group"
+      aria-label="Filtrer la carte par état"
       className={floating ? "map-overlay map-legend-overlay" : "card"}
-      style={
-        floating
-          ? undefined
-          : { display: "flex", flexWrap: "wrap", gap: "var(--space-2)", padding: "var(--space-3) var(--space-4)" }
-      }
     >
-      {ETAT_ORDER.map((etat) => {
+      {ETAT_ORDER.filter((etat) => etat !== "inconnue" || counts.inconnue > 0).map((etat) => {
         const color = ETAT_COLORS[etat];
+        const off = hidden.has(etat);
         return (
-          <span key={etat} className="chip" style={{ background: `${color}1c`, color }}>
-            <span className="chip-dot" aria-hidden="true" style={{ background: color }} />
-            <span style={{ color: "var(--text-secondary)" }}>{ETAT_LABELS[etat]}</span>
-          </span>
+          <button
+            key={etat}
+            type="button"
+            className="legend-filter"
+            aria-pressed={!off}
+            onClick={() => onToggle(etat)}
+            title={off ? `Afficher : ${ETAT_LABELS[etat]}` : `Masquer : ${ETAT_LABELS[etat]}`}
+            style={{ opacity: off ? 0.5 : 1 }}
+          >
+            <span
+              className="chip-dot"
+              aria-hidden="true"
+              style={{ background: off ? "transparent" : color, border: `2px solid ${color}` }}
+            />
+            <span>{ETAT_LABELS[etat]}</span>
+            <strong>{formatNumber(counts[etat])}</strong>
+          </button>
         );
       })}
     </div>
